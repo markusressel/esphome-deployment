@@ -1,0 +1,2 @@
+esphome_deployment:
+  log_level: "ERROR"

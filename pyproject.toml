@@ -1,0 +1,35 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "esphome-deployment"
+version = "0.1.0"
+description = "Automated deployment of ESPHome configuration files to devices"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [{ name = "markusressel" }]
+license = { text = "AGPL-3.0-or-later" }
+keywords = ["esphome", "iot", "deployment", "home-automation"]
+
+dependencies = [
+    #"esphome>=2024.12.0",
+    "ruamel.yaml>0.18.0",
+    "ruamel-yaml-clib==0.2.15",
+    "click>=8.0",
+    "container-app-conf>=5.0.0",
+    #"aiohttp>=3.8"
+]
+
+[project.scripts]
+esphome-deployment = "esphome_deployment.cli:cli"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
