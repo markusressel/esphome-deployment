@@ -1,6 +1,6 @@
 # esphome-deploy
 
-A configuration deplyment tool for ESPHome projects.
+A CLI Tool for managing compilation and deployment of ESPHome Device configurations.
 
 ## Features
 
