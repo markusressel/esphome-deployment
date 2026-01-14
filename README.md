@@ -7,6 +7,7 @@ A CLI Tool for managing compilation and deployment of ESPHome Device configurati
 - Batch-Deploy ESPHome configurations
 - Build caching with reproducible builds
 - Only upload changed binaries
+- Deployment State Tracking via VCS (Git)
 
 # Setup
 
