@@ -112,6 +112,7 @@ def _detect_device_configuration_names() -> List[str]:
 
     return config_names
 
+
 @cli.command(name="deploy")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to run (filename without extension)')
@@ -138,13 +139,6 @@ def c_deploy(name: Optional[str | list[str]]):
         else:
             deployment_coordinator.deploy_all(path)
 
-    # tasks = asyncio.gather(
-    #     webserver.start(),
-    # )
-    #
-    # loop.run_until_complete(tasks)
-    # loop.run_forever()
-
 
 @cli.command(name="clean")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str,
@@ -163,13 +157,6 @@ def c_clean(name: Optional[str]):
         deployment_coordinator.clean(name, path)
     else:
         deployment_coordinator.clean_all(path)
-
-    # tasks = asyncio.gather(
-    #     webserver.start(),
-    # )
-    #
-    # loop.run_until_complete(tasks)
-    # loop.run_forever()
 
 
 @cli.command(name="config")
