@@ -1,4 +1,4 @@
-# esphome-deploy
+# esphome-deployment
 
 A CLI Tool for managing compilation and deployment of ESPHome Device configurations.
 
