@@ -21,7 +21,7 @@ Unfortunately, ESPHome does not currently guarantee reproducible builds out of t
 there are a couple of small config options we can put into a package and include in all of our
 device configurations to help with this.
 
-### `esphome` section
+### `esphome` Section
 
 ```yaml
 esphome:
@@ -34,7 +34,7 @@ esphome:
       - '-D__TIME__="\"23:00:00\""'
 ```
 
-### `esp32` section
+### `esp32` Section
 
 ```yaml
 esp32:
@@ -56,7 +56,7 @@ Only the general `esphome` section as shown above is needed.
 1. Clone this repository next to your ESPHome configurations
 2. Ensure your configurations utilize the reproducible build options as shown above
 
-### Install dependencies
+### Install Dependencies
 
 ```bash
 python3 -m venv venv
@@ -64,13 +64,13 @@ python3 -m venv venv
 poetry install -P ./esphome-deployment
 ```
 
-### Compile a single configuration
+### Compile a single Configuration
 
 ```bash
 poetry run -P ./esphome-deployment esphome-deployment compile -n "your_epshome_config.yaml"
 ```
 
-### Upload a single configuration
+### Upload a single Configuration
 
 ```bash
 poetry run -P ./esphome-deployment esphome-deployment upload -n "your_epshome_config.yaml"
