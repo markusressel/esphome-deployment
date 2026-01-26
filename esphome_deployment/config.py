@@ -13,8 +13,8 @@ from esphome_deployment.const import CONFIG_NODE_ROOT
 class AppConfig(ConfigBase):
 
     def __new__(cls, *args, **kwargs):
-        yaml_source = YamlSource(CONFIG_NODE_ROOT)
-        toml_source = TomlSource(CONFIG_NODE_ROOT)
+        yaml_source = YamlSource(file_name=CONFIG_NODE_ROOT)
+        toml_source = TomlSource(file_name=CONFIG_NODE_ROOT)
         data_sources = [
             EnvSource(),
             yaml_source,
