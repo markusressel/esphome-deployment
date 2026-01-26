@@ -10,7 +10,7 @@ import click
 from container_app_conf.formatter.toml import TomlFormatter
 
 from esphome_deployment.config import AppConfig
-from esphome_deployment.deployment.deployment_coordinator import DeploymentCoordinator
+from esphome_deployment.deployment.deployment_coordinator import DeploymentCoordinator, CompileOptions, UploadOptions
 from esphome_deployment.persistence import DeploymentPersistence
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
@@ -95,12 +95,13 @@ def c_compile(
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence)
 
+    compile_options = CompileOptions(allow_downgrade=allow_downgrade)
     for name in names:
         if name:
             name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.compile(name=name, path=path, allow_downgrade=allow_downgrade)
+            deployment_coordinator.compile(name=name, path=path, compile_options=compile_options)
         else:
-            deployment_coordinator.compile_all(path=path, allow_downgrade=allow_downgrade)
+            deployment_coordinator.compile_all(path=path, compile_options=compile_options)
 
 
 @cli.command(name="upload")
@@ -108,7 +109,7 @@ def c_compile(
               help='The name of the deployment to upload (filename without extension)')
 def c_upload(
     name: Optional[str | list[str]],
-    ignore_compile_version_mismatch: bool = False,
+    ignore_compiled_binary_mismatch: bool = False,
     force: bool = False,
 ):
     """
@@ -126,12 +127,17 @@ def c_upload(
 
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+
+    upload_options = UploadOptions(
+        force=force,
+        ignore_compiled_binary_mismatch=ignore_compiled_binary_mismatch,
+    )
     for name in names:
         if name:
             name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.upload(name, path)
+            deployment_coordinator.upload(name=name, path=path, upload_options=upload_options)
         else:
-            deployment_coordinator.upload_all(path)
+            deployment_coordinator.upload_all(path=path, upload_options=upload_options)
 
 
 @cli.command(name="deploy")
@@ -142,6 +148,8 @@ def c_upload(
 def c_deploy(
     name: Optional[str | list[str]],
     allow_downgrade: bool,
+    ignore_compiled_binary_mismatch: bool = False,
+    force: bool = False,
 ):
     """
     Deploy (compile + upload) the given deployment(s)
@@ -161,12 +169,18 @@ def c_deploy(
 
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+
+    compile_options = CompileOptions(allow_downgrade=allow_downgrade)
+    upload_options = UploadOptions(
+        force=force,
+        ignore_compiled_binary_mismatch=ignore_compiled_binary_mismatch,
+    )
     for name in names:
         if name:
             name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.deploy(name, path, allow_downgrade=allow_downgrade)
+            deployment_coordinator.deploy(name=name, path=path, compile_options=compile_options, upload_options=upload_options)
         else:
-            deployment_coordinator.deploy_all(path, allow_downgrade=allow_downgrade)
+            deployment_coordinator.deploy_all(path=path, compile_options=compile_options, upload_options=upload_options)
 
 
 @cli.command(name="clean")

@@ -1,12 +1,28 @@
 import datetime
 import logging
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
 from esphome_deployment.deployment import EspHomeDeploymentConfiguration, CompileInfo, UploadInfo
 from esphome_deployment.util import calculate_md5_file, calculate_md5_yaml_recursive, load_yaml_file
 from esphome_deployment.util.semver import SemVerVersion
+
+
+@dataclass
+class CompileOptions:
+    # whether to allow downgrading ESPHome version when compiling
+    allow_downgrade: bool = False
+
+
+@dataclass
+class UploadOptions:
+    # whether to force the upload even if the state tells us that we have already uploaded this firmware binary
+    force: bool = False
+
+    # whether to ignore mismatches between the locally present compiled binary and the last known compiled one
+    ignore_compiled_binary_mismatch: bool = False
 
 
 class DeploymentCoordinator:
@@ -41,24 +57,36 @@ class DeploymentCoordinator:
         for config_file in configuration_files:
             self.clean(config_file.stem, path)
 
-    def compile(self, name: str, path: Path, allow_downgrade: bool = False):
+    def compile(
+        self,
+        name: str,
+        path: Path,
+        compile_options: CompileOptions = CompileOptions()
+    ):
         """
         Compiles a specific configuration
         :param name: the name of the deployment (filename without extension)
         :param path: the path where the configuration file is located
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
         """
         file_path = path / f"{name}.yaml"
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
-        self.compile_deployment_configs_if_needed(filtered_deployments)
+        self.compile_deployment_configs_if_needed(
+            deployment_configs=filtered_deployments,
+            compile_options=compile_options
+        )
 
-    def compile_all(self, path: Path = Path('./'), allow_downgrade: bool = False):
+    def compile_all(
+        self,
+        path: Path = Path('./'),
+        compile_options: CompileOptions = CompileOptions()
+    ):
         """
         Compiles all configurations found in the given path
         :param path: the path to search for configurations
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
         """
         configuration_files = self.find_esphome_configuration_files(path)
         self.LOGGER.info(f"Found {len(configuration_files)} configurations")
@@ -71,27 +99,37 @@ class DeploymentCoordinator:
         skipped_count = len(deployment_configurations) - len(filtered_deployments)
         self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
 
-        self.compile_deployment_configs_if_needed(deployment_configs=filtered_deployments, allow_downgrade=allow_downgrade)
+        self.compile_deployment_configs_if_needed(
+            deployment_configs=filtered_deployments,
+            compile_options=compile_options
+        )
 
-    def upload(self, name: str, path: Path, force: bool = False):
+    def upload(self, name: str, path: Path, upload_options: UploadOptions = UploadOptions()):
         """
         Uploads a specific configuration
         :param name: the name of the deployment (filename without extension)
         :param path: the path where the configuration file is located
-        :param force: whether to force the upload even if the firmware binary hash doesn't match the last known compiled one
+        :param upload_options: options for upload
         """
         file_path = path / f"{name}.yaml"
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
         for filtered_deployment in filtered_deployments:
-            self.upload_deployment_config_if_needed(filtered_deployment, force)
+            self.upload_deployment_config_if_needed(
+                deployment_config=filtered_deployment,
+                upload_options=upload_options
+            )
 
-    def upload_all(self, path: Path = Path('./'), force: bool = False):
+    def upload_all(
+        self,
+        path: Path = Path('./'),
+        upload_options: UploadOptions = UploadOptions()
+    ):
         """
         Uploads all configurations found in the given path
         :param path: the path to search for configurations
-        :param force: whether to force the upload even if the firmware binary hash doesn't match the last known compiled one
+        :param upload_options: options for upload
         """
         configuration_files = self.find_esphome_configuration_files(path)
         self.LOGGER.info(f"Found {len(configuration_files)} configurations")
@@ -105,26 +143,46 @@ class DeploymentCoordinator:
         self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
 
         for filtered_deployment in filtered_deployments:
-            self.upload_deployment_config_if_needed(filtered_deployment, force)
+            self.upload_deployment_config_if_needed(
+                deployment_config=filtered_deployment,
+                upload_options=upload_options
+            )
 
-    def deploy(self, name: str, path: Path, allow_downgrade: bool = False):
+    def deploy(
+        self,
+        name: str,
+        path: Path,
+        compile_options: CompileOptions = CompileOptions(),
+        upload_options: UploadOptions = UploadOptions()
+    ):
         """
         Deploys a specific configuration
         :param name: the name of the deployment (filename without extension)
         :param path: the path where the configuration file is located
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
+        :param upload_options: options for upload
         """
         file_path = path / f"{name}.yaml"
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
-        self.deploy_deployment_configs_if_needed(filtered_deployments, allow_downgrade=allow_downgrade)
+        self.deploy_deployment_configs_if_needed(
+            deployment_configs=filtered_deployments,
+            compile_options=compile_options,
+            upload_options=upload_options
+        )
 
-    def deploy_all(self, path: Path = Path('./'), allow_downgrade: bool = False):
+    def deploy_all(
+        self,
+        path: Path = Path('./'),
+        compile_options: CompileOptions = CompileOptions(),
+        upload_options: UploadOptions = UploadOptions(),
+    ):
         """
         Deploys all configurations found in the given path
         :param path: the path to search for configurations
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
+        :param upload_options: options for upload
         """
         configuration_files = self.find_esphome_configuration_files(path)
         self.LOGGER.info(f"Found {len(configuration_files)} configurations")
@@ -137,7 +195,11 @@ class DeploymentCoordinator:
         skipped_count = len(deployment_configurations) - len(filtered_deployments)
         self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
 
-        self.deploy_deployment_configs_if_needed(filtered_deployments, allow_downgrade=allow_downgrade)
+        self.deploy_deployment_configs_if_needed(
+            deployment_configs=filtered_deployments,
+            compile_options=compile_options,
+            upload_options=upload_options
+        )
 
     def find_esphome_configuration_files(self, directory: Path) -> List[Path]:
         """
@@ -164,7 +226,8 @@ class DeploymentCoordinator:
             deployment_configurations.append(deployment_config)
         return deployment_configurations
 
-    def load_deployment_configuration(self, config_file: Path) -> EspHomeDeploymentConfiguration:
+    @staticmethod
+    def load_deployment_configuration(config_file: Path) -> EspHomeDeploymentConfiguration:
         """
         Loads a deployment configuration from the given configuration file
         :param config_file: the path to the configuration file
@@ -202,30 +265,34 @@ class DeploymentCoordinator:
     def deploy_deployment_configs_if_needed(
         self,
         deployment_configs: List[EspHomeDeploymentConfiguration],
-        allow_downgrade: bool = False
+        compile_options: CompileOptions = CompileOptions(),
+        upload_options: UploadOptions = UploadOptions(),
     ):
         """
         Processes the given list of deployment configurations
         :param deployment_configs:  the list of deployment configurations to process
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
+        :param upload_options: options for upload
         """
         for config in deployment_configs:
-            self.deploy_deployment_config_if_needed(config, allow_downgrade=allow_downgrade)
+            self.deploy_deployment_config_if_needed(config, compile_options=compile_options, upload_options=upload_options)
 
     def deploy_deployment_config_if_needed(
         self,
         deployment_config: EspHomeDeploymentConfiguration,
-        allow_downgrade: bool = False
+        compile_options: CompileOptions = CompileOptions(),
+        upload_options: UploadOptions = UploadOptions(),
     ):
         """
         Deploys the given deployment configuration
         :param deployment_config: the deployment configuration to deploy
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
+        :param upload_options: options for upload
         """
         self.LOGGER.info(f"Deploying configuration for: {deployment_config.name}")
 
-        self.compile_deployment_config_if_needed(deployment_config=deployment_config, allow_downgrade=allow_downgrade)
-        self.upload_deployment_config_if_needed(deployment_config=deployment_config)
+        self.compile_deployment_config_if_needed(deployment_config=deployment_config, compile_options=compile_options)
+        self.upload_deployment_config_if_needed(deployment_config=deployment_config, upload_options=upload_options)
 
     def compile_configuration(self, deployment_config: EspHomeDeploymentConfiguration):
         """
@@ -308,7 +375,8 @@ class DeploymentCoordinator:
     def _get_remembered_upload_info(self, deployment_config: EspHomeDeploymentConfiguration) -> Optional[UploadInfo]:
         return self._persistence.load_upload_info(deployment_config)
 
-    def _calculate_config_hash(self, deployment_config: EspHomeDeploymentConfiguration) -> str:
+    @staticmethod
+    def _calculate_config_hash(deployment_config: EspHomeDeploymentConfiguration) -> str:
         """
         Calculates a hash for the given deployment configuration
         :param deployment_config: the deployment configuration to hash
@@ -320,7 +388,8 @@ class DeploymentCoordinator:
         )
         return result
 
-    def _calculate_firmware_binary_hash(self, deployment_config: EspHomeDeploymentConfiguration) -> Optional[str]:
+    @staticmethod
+    def _calculate_firmware_binary_hash(deployment_config: EspHomeDeploymentConfiguration) -> Optional[str]:
         """
         Calculates a hash for the compiled firmware binary of the given deployment configuration
         :param deployment_config: the deployment configuration to hash
@@ -338,7 +407,8 @@ class DeploymentCoordinator:
         self.LOGGER.info(f"Executing esphome with arguments: {args}")
         subprocess.run(['esphome', *args], check=True)
 
-    def _get_current_esphome_version(self) -> SemVerVersion:
+    @staticmethod
+    def _get_current_esphome_version() -> SemVerVersion:
         """
         Gets the current version of esphome
         :return: a string representing the esphome version, e.g., "2025.12.2"
@@ -350,26 +420,26 @@ class DeploymentCoordinator:
     def compile_deployment_configs_if_needed(
         self,
         deployment_configs: List[EspHomeDeploymentConfiguration],
-        allow_downgrade: bool = False
+        compile_options: CompileOptions,
     ):
         """
         Compiles the given list of deployment configurations
 
         :param deployment_configs:  the list of deployment configurations to compile
-        :param allow_downgrade: whether to allow downgrading ESPHome version when
+        :param compile_options: options for compilation
         """
         for config in deployment_configs:
-            self.compile_deployment_config_if_needed(deployment_configs=config, allow_downgrade=allow_downgrade)
+            self.compile_deployment_config_if_needed(deployment_configs=config, compile_options=compile_options)
 
     def compile_deployment_config_if_needed(
         self,
         deployment_config: EspHomeDeploymentConfiguration,
-        allow_downgrade: bool = False
+        compile_options: CompileOptions,
     ):
         """
         Compiles a single deployment configuration
         :param deployment_config: the deployment configuration to compile
-        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
+        :param compile_options: options for compilation
         """
 
         compile_info: CompileInfo = self._get_remembered_compile_info(deployment_config)
@@ -382,7 +452,7 @@ class DeploymentCoordinator:
             if current_esphome_version < compile_info.esphome_version:
                 self.LOGGER.warning(
                     f"Detected downgrade of esphome version for '{deployment_config.name}': {current_esphome_version} < {compile_info.esphome_version}. Forcing recompilation.")
-                if not allow_downgrade:
+                if not compile_options.allow_downgrade:
                     self.LOGGER.error("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
                     return
                 self.compile_configuration(deployment_config)
@@ -400,13 +470,13 @@ class DeploymentCoordinator:
     def upload_deployment_config_if_needed(
         self,
         deployment_config: EspHomeDeploymentConfiguration,
-        force: bool
+        upload_options: UploadOptions = UploadOptions(),
     ):
         """
         Uploads a single deployment configuration, if needed.
 
         :param deployment_config: the deployment configuration to upload
-        :param force: whether to force the upload even if the firmware binary hash doesn't match the last known compiled one
+        :param upload_options: options for upload
         """
         if not deployment_config.binary_file_path.exists():
             raise FileNotFoundError(f"Firmware binary not found for '{deployment_config.name}': {deployment_config.binary_file_path}, please compile first.")
@@ -418,13 +488,13 @@ class DeploymentCoordinator:
             if compile_info.binary_hash != current_binary_hash:
                 self.LOGGER.warning(
                     f"Local firmware binary doesn't match last compiled firmware (expected: {compile_info.binary_hash}, actual: {current_binary_hash}). A recompile is recommended. If you still want to upload, use the '--force' flag.")
-                if not force:
+                if not upload_options.ignore_compiled_binary_mismatch:
                     return
 
             if upload_info.binary_hash == current_binary_hash:
                 self.LOGGER.warning(
                     f"Local firmware binary already uploaded for '{deployment_config.name}'.")
-                if not force:
+                if not upload_options.force:
                     return
 
         self.upload_configuration(deployment_config)
