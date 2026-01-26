@@ -498,6 +498,7 @@ class DeploymentCoordinator:
                 self.LOGGER.warning(
                     f"Local firmware binary already uploaded for '{deployment_config.name}'.")
                 if not upload_options.force:
+                    self.LOGGER.info(f"Skipping upload for '{deployment_config.name}'.")
                     return
                 else:
                     self.LOGGER.info(f"Forcing upload for '{deployment_config.name}' as per '--force' flag.")
