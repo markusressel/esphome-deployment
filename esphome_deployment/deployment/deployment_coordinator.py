@@ -429,7 +429,10 @@ class DeploymentCoordinator:
         :param compile_options: options for compilation
         """
         for config in deployment_configs:
-            self.compile_deployment_config_if_needed(deployment_configs=config, compile_options=compile_options)
+            self.compile_deployment_config_if_needed(
+                deployment_config=config,
+                compile_options=compile_options
+            )
 
     def compile_deployment_config_if_needed(
         self,
@@ -453,8 +456,7 @@ class DeploymentCoordinator:
                 self.LOGGER.warning(
                     f"Detected downgrade of esphome version for '{deployment_config.name}': {current_esphome_version} < {compile_info.esphome_version}. Forcing recompilation.")
                 if not compile_options.allow_downgrade:
-                    self.LOGGER.error("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
-                    return
+                    raise AssertionError("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
                 self.compile_configuration(deployment_config)
                 return
 
