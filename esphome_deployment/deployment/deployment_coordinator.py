@@ -71,6 +71,40 @@ class DeploymentCoordinator:
 
         self.compile_deployment_configs_if_needed(filtered_deployments)
 
+    def upload(self, name: str, path: Path, force: bool = False):
+        """
+        Uploads a specific configuration
+        :param name: the name of the deployment (filename without extension)
+        :param path: the path where the configuration file is located
+        :param force: whether to force the upload even if the firmware binary hash doesn't match the last known compiled one
+        """
+        file_path = path / f"{name}.yaml"
+        file_paths = [file_path]
+        deployment_configuration = self.load_deployment_configurations(file_paths)
+        filtered_deployments = self.filter_deployments(deployment_configuration)
+        for filtered_deployment in filtered_deployments:
+            self.upload_deployment_config_if_needed(filtered_deployment, force)
+
+    def upload_all(self, path: Path = Path('./'), force: bool = False):
+        """
+        Uploads all configurations found in the given path
+        :param path: the path to search for configurations
+        :param force: whether to force the upload even if the firmware binary hash doesn't match the last known compiled one
+        """
+        configuration_files = self.find_esphome_configuration_files(path)
+        self.LOGGER.info(f"Found {len(configuration_files)} configurations")
+
+        deployment_configurations: List[EspHomeDeploymentConfiguration] = self.load_deployment_configurations(
+            configuration_files)
+        self.LOGGER.info(f"Loaded {len(deployment_configurations)} deployment configurations")
+
+        filtered_deployments = self.filter_deployments(deployment_configurations)
+        skipped_count = len(deployment_configurations) - len(filtered_deployments)
+        self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
+
+        for filtered_deployment in filtered_deployments:
+            self.upload_deployment_config_if_needed(filtered_deployment, force)
+
     def deploy(self, name: str, path: Path):
         """
         Deploys a specific configuration
@@ -257,7 +291,7 @@ class DeploymentCoordinator:
         )
         self._persistence.save_upload_info(upload_info, deployment_config)
 
-    def _get_remembered_upload_info(self, deployment_config) -> Optional[UploadInfo]:
+    def _get_remembered_upload_info(self, deployment_config: EspHomeDeploymentConfiguration) -> Optional[UploadInfo]:
         return self._persistence.load_upload_info(deployment_config)
 
     def _calculate_config_hash(self, deployment_config: EspHomeDeploymentConfiguration) -> str:
@@ -334,15 +368,34 @@ class DeploymentCoordinator:
 
         self.compile_configuration(deployment_config)
 
-    def upload_deployment_config_if_needed(self, deployment_config):
+    def upload_deployment_config_if_needed(
+        self,
+        deployment_config: EspHomeDeploymentConfiguration,
+        force: bool
+    ):
+        """
+        Uploads a single deployment configuration, if needed.
+
+        :param deployment_config: the deployment configuration to upload
+        :param force: whether to force the upload even if the firmware binary hash doesn't match the last known compiled one
+        """
+        if not deployment_config.binary_file_path.exists():
+            raise FileNotFoundError(f"Firmware binary not found for '{deployment_config.name}': {deployment_config.binary_file_path}, please compile first.")
+        compile_info: Optional[CompileInfo] = self._get_remembered_compile_info(deployment_config)
         upload_info: Optional[UploadInfo] = self._get_remembered_upload_info(deployment_config)
         if upload_info is not None:
             current_binary_hash = self._calculate_firmware_binary_hash(deployment_config)
 
+            if compile_info.binary_hash != current_binary_hash:
+                self.LOGGER.warning(
+                    f"Local firmware binary doesn't match last compiled firmware (expected: {compile_info.binary_hash}, actual: {current_binary_hash}). A recompile is recommended. If you still want to upload, use the '--force' flag.")
+                if not force:
+                    return
+
             if upload_info.binary_hash == current_binary_hash:
                 self.LOGGER.warning(
-                    f"Skipping upload for '{deployment_config.name}': firmware.bin already uploaded.")
-            else:
-                self.upload_configuration(deployment_config)
-        else:
-            self.upload_configuration(deployment_config)
+                    f"Local firmware binary already uploaded for '{deployment_config.name}'.")
+                if not force:
+                    return
+
+        self.upload_configuration(deployment_config)

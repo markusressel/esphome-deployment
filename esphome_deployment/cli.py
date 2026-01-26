@@ -73,7 +73,7 @@ def _base_setup():
               help='The name of the deployment to compile (filename without extension)')
 def c_compile(name: Optional[str | list[str]]):
     """
-    Compile
+    Compile the given deployment(s)
     """
     names = name
     if isinstance(names, str):
@@ -113,12 +113,39 @@ def _detect_device_configuration_names() -> List[str]:
     return config_names
 
 
+@cli.command(name="upload")
+@click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
+              help='The name of the deployment to upload (filename without extension)')
+def c_upload(name: Optional[str | list[str]]):
+    """
+    Upload the given deployment(s)
+    """
+    names = name
+    if isinstance(names, str):
+        names = [names]
+
+    if not names:
+        names = _detect_device_configuration_names()
+
+    _base_setup()
+    path = Path(os.getcwd())
+
+    persistence = DeploymentPersistence(base_path=path)
+    deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+    for name in names:
+        if name:
+            name = name.removesuffix('.yaml').removesuffix('.yml')
+            deployment_coordinator.upload(name, path)
+        else:
+            deployment_coordinator.upload_all(path)
+
+
 @cli.command(name="deploy")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to run (filename without extension)')
 def c_deploy(name: Optional[str | list[str]]):
     """
-    Run
+    Deploy (compile + upload) the given deployment(s)
     """
     names = name
     if isinstance(names, str):
