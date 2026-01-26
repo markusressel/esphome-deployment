@@ -31,10 +31,14 @@ def signal_handler(signal=None, frame=None):
 
 PARAM_DEPLOYMENT_NAME = "name"
 PARAM_DOWNGRADE_NAME = "allow_downgrade"
+PARAM_FORCE = "force"
+PARAM_IGNORE_COMPILED_BINARY_MISMATCH = "ignore_compiled_binary_mismatch"
 
 CMD_OPTION_NAMES = {
     PARAM_DEPLOYMENT_NAME: ["-n", "--name"],
     PARAM_DOWNGRADE_NAME: ["--allow-downgrade"],
+    PARAM_FORCE: ["--force"],
+    PARAM_IGNORE_COMPILED_BINARY_MISMATCH: ["--ignore-compiled-binary-mismatch"],
 }
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -107,6 +111,10 @@ def c_compile(
 @cli.command(name="upload")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to upload (filename without extension)')
+@click.option(*get_option_names(PARAM_IGNORE_COMPILED_BINARY_MISMATCH), is_flag=True, default=False,
+              help='Ignore compiled binary mismatch when uploading')
+@click.option(*get_option_names(PARAM_FORCE), is_flag=True, default=False,
+              help='Force upload even if the binary matches the last uploaded one')
 def c_upload(
     name: Optional[str | list[str]],
     ignore_compiled_binary_mismatch: bool = False,
@@ -145,6 +153,10 @@ def c_upload(
               help='The name of the deployment to run (filename without extension)')
 @click.option(*get_option_names(PARAM_DOWNGRADE_NAME), is_flag=True, default=False,
               help='Allow downgrading ESPHome version when compiling')
+@click.option(*get_option_names(PARAM_IGNORE_COMPILED_BINARY_MISMATCH), is_flag=True, default=False,
+              help='Ignore compiled binary mismatch when uploading')
+@click.option(*get_option_names(PARAM_FORCE), is_flag=True, default=False,
+              help='Force upload even if the binary matches the last uploaded one')
 def c_deploy(
     name: Optional[str | list[str]],
     allow_downgrade: bool,
@@ -156,6 +168,8 @@ def c_deploy(
 
     :param name: The name(s) of the deployment(s) to deploy
     :param allow_downgrade: Whether downgrading ESPHome version is allowed
+    :param ignore_compiled_binary_mismatch: Whether to ignore compiled binary mismatch when uploading
+    :param force: Whether to force upload even if the binary matches the last uploaded one
     """
     names = name
     if isinstance(names, str):
