@@ -489,14 +489,16 @@ class DeploymentCoordinator:
 
             if compile_info.binary_hash != current_binary_hash:
                 self.LOGGER.warning(
-                    f"Local firmware binary doesn't match last compiled firmware (expected: {compile_info.binary_hash}, actual: {current_binary_hash}). A recompile is recommended. If you still want to upload, use the '--force' flag.")
+                    f"Local firmware binary doesn't match last compiled firmware (expected: {compile_info.binary_hash}, actual: {current_binary_hash}). A recompile is recommended. If you still want to upload, use the '--ignore-compiled-binary-mismatch' flag.")
                 if not upload_options.ignore_compiled_binary_mismatch:
-                    return
+                    raise AssertionError("Compiled binary mismatch. Use the '--ignore-compiled-binary-mismatch' flag to ignore this check.")
 
             if upload_info.binary_hash == current_binary_hash:
                 self.LOGGER.warning(
                     f"Local firmware binary already uploaded for '{deployment_config.name}'.")
                 if not upload_options.force:
                     return
+                else:
+                    self.LOGGER.info(f"Forcing upload for '{deployment_config.name}' as per '--force' flag.")
 
         self.upload_configuration(deployment_config)
