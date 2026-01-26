@@ -454,9 +454,10 @@ class DeploymentCoordinator:
 
             if current_esphome_version < compile_info.esphome_version:
                 self.LOGGER.warning(
-                    f"Detected downgrade of esphome version for '{deployment_config.name}': {current_esphome_version} < {compile_info.esphome_version}. Forcing recompilation.")
+                    f"Detected downgrade of esphome version for '{deployment_config.name}': {current_esphome_version} < {compile_info.esphome_version}.")
                 if not compile_options.allow_downgrade:
                     raise AssertionError("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
+                self.LOGGER.info(f"Allowing downgrade for '{deployment_config.name}' as per '--allow-downgrade' flag, proceeding with compile.")
                 self.compile_configuration(deployment_config)
                 return
 
