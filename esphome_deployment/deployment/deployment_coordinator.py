@@ -41,11 +41,12 @@ class DeploymentCoordinator:
         for config_file in configuration_files:
             self.clean(config_file.stem, path)
 
-    def compile(self, name: str, path: Path):
+    def compile(self, name: str, path: Path, allow_downgrade: bool = False):
         """
         Compiles a specific configuration
         :param name: the name of the deployment (filename without extension)
         :param path: the path where the configuration file is located
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
         file_path = path / f"{name}.yaml"
         file_paths = [file_path]
@@ -53,10 +54,11 @@ class DeploymentCoordinator:
         filtered_deployments = self.filter_deployments(deployment_configuration)
         self.compile_deployment_configs_if_needed(filtered_deployments)
 
-    def compile_all(self, path: Path = Path('./')):
+    def compile_all(self, path: Path = Path('./'), allow_downgrade: bool = False):
         """
         Compiles all configurations found in the given path
         :param path: the path to search for configurations
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
         configuration_files = self.find_esphome_configuration_files(path)
         self.LOGGER.info(f"Found {len(configuration_files)} configurations")
@@ -69,7 +71,7 @@ class DeploymentCoordinator:
         skipped_count = len(deployment_configurations) - len(filtered_deployments)
         self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
 
-        self.compile_deployment_configs_if_needed(filtered_deployments)
+        self.compile_deployment_configs_if_needed(deployment_configs=filtered_deployments, allow_downgrade=allow_downgrade)
 
     def upload(self, name: str, path: Path, force: bool = False):
         """
@@ -105,22 +107,24 @@ class DeploymentCoordinator:
         for filtered_deployment in filtered_deployments:
             self.upload_deployment_config_if_needed(filtered_deployment, force)
 
-    def deploy(self, name: str, path: Path):
+    def deploy(self, name: str, path: Path, allow_downgrade: bool = False):
         """
         Deploys a specific configuration
         :param name: the name of the deployment (filename without extension)
         :param path: the path where the configuration file is located
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
         file_path = path / f"{name}.yaml"
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
-        self.deploy_deployment_configs_if_needed(filtered_deployments)
+        self.deploy_deployment_configs_if_needed(filtered_deployments, allow_downgrade=allow_downgrade)
 
-    def deploy_all(self, path: Path = Path('./')):
+    def deploy_all(self, path: Path = Path('./'), allow_downgrade: bool = False):
         """
         Deploys all configurations found in the given path
         :param path: the path to search for configurations
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
         configuration_files = self.find_esphome_configuration_files(path)
         self.LOGGER.info(f"Found {len(configuration_files)} configurations")
@@ -133,7 +137,7 @@ class DeploymentCoordinator:
         skipped_count = len(deployment_configurations) - len(filtered_deployments)
         self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
 
-        self.deploy_deployment_configs_if_needed(filtered_deployments)
+        self.deploy_deployment_configs_if_needed(filtered_deployments, allow_downgrade=allow_downgrade)
 
     def find_esphome_configuration_files(self, directory: Path) -> List[Path]:
         """
@@ -195,23 +199,33 @@ class DeploymentCoordinator:
 
         return result
 
-    def deploy_deployment_configs_if_needed(self, deployment_configs: List[EspHomeDeploymentConfiguration]):
+    def deploy_deployment_configs_if_needed(
+        self,
+        deployment_configs: List[EspHomeDeploymentConfiguration],
+        allow_downgrade: bool = False
+    ):
         """
         Processes the given list of deployment configurations
         :param deployment_configs:  the list of deployment configurations to process
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
         for config in deployment_configs:
-            self.deploy_deployment_config_if_needed(config)
+            self.deploy_deployment_config_if_needed(config, allow_downgrade=allow_downgrade)
 
-    def deploy_deployment_config_if_needed(self, deployment_config: EspHomeDeploymentConfiguration):
+    def deploy_deployment_config_if_needed(
+        self,
+        deployment_config: EspHomeDeploymentConfiguration,
+        allow_downgrade: bool = False
+    ):
         """
         Deploys the given deployment configuration
         :param deployment_config: the deployment configuration to deploy
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
         self.LOGGER.info(f"Deploying configuration for: {deployment_config.name}")
 
-        self.compile_deployment_config_if_needed(deployment_config)
-        self.upload_deployment_config_if_needed(deployment_config)
+        self.compile_deployment_config_if_needed(deployment_config=deployment_config, allow_downgrade=allow_downgrade)
+        self.upload_deployment_config_if_needed(deployment_config=deployment_config)
 
     def compile_configuration(self, deployment_config: EspHomeDeploymentConfiguration):
         """
@@ -333,17 +347,29 @@ class DeploymentCoordinator:
         esphome_version = esphome_version.replace("Version:", "").strip()
         return SemVerVersion(esphome_version)
 
-    def compile_deployment_configs_if_needed(self, deployment_configs: List[EspHomeDeploymentConfiguration]):
+    def compile_deployment_configs_if_needed(
+        self,
+        deployment_configs: List[EspHomeDeploymentConfiguration],
+        allow_downgrade: bool = False
+    ):
         """
         Compiles the given list of deployment configurations
+
+        :param deployment_configs:  the list of deployment configurations to compile
+        :param allow_downgrade: whether to allow downgrading ESPHome version when
         """
         for config in deployment_configs:
-            self.compile_deployment_config_if_needed(config)
+            self.compile_deployment_config_if_needed(deployment_configs=config, allow_downgrade=allow_downgrade)
 
-    def compile_deployment_config_if_needed(self, deployment_config: EspHomeDeploymentConfiguration):
+    def compile_deployment_config_if_needed(
+        self,
+        deployment_config: EspHomeDeploymentConfiguration,
+        allow_downgrade: bool = False
+    ):
         """
         Compiles a single deployment configuration
         :param deployment_config: the deployment configuration to compile
+        :param allow_downgrade: whether to allow downgrading ESPHome version when compiling
         """
 
         compile_info: CompileInfo = self._get_remembered_compile_info(deployment_config)
@@ -356,6 +382,9 @@ class DeploymentCoordinator:
             if current_esphome_version < compile_info.esphome_version:
                 self.LOGGER.warning(
                     f"Detected downgrade of esphome version for '{deployment_config.name}': {current_esphome_version} < {compile_info.esphome_version}. Forcing recompilation.")
+                if not allow_downgrade:
+                    self.LOGGER.error("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
+                    return
                 self.compile_configuration(deployment_config)
                 return
 

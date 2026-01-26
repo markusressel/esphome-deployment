@@ -30,9 +30,11 @@ def signal_handler(signal=None, frame=None):
 
 
 PARAM_DEPLOYMENT_NAME = "name"
+PARAM_DOWNGRADE_NAME = "allow_downgrade"
 
 CMD_OPTION_NAMES = {
     PARAM_DEPLOYMENT_NAME: ["-n", "--name"],
+    PARAM_DOWNGRADE_NAME: ["--allow-downgrade"],
 }
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -71,7 +73,12 @@ def _base_setup():
 @cli.command(name="compile")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to compile (filename without extension)')
-def c_compile(name: Optional[str | list[str]]):
+@click.option(*get_option_names(PARAM_DOWNGRADE_NAME), is_flag=True, default=False,
+              help='Allow downgrading ESPHome version when compiling')
+def c_compile(
+    name: Optional[str | list[str]],
+    allow_downgrade: bool,
+):
     """
     Compile the given deployment(s)
     """
@@ -91,32 +98,19 @@ def c_compile(name: Optional[str | list[str]]):
     for name in names:
         if name:
             name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.compile(name, path)
+            deployment_coordinator.compile(name=name, path=path, allow_downgrade=allow_downgrade)
         else:
-            deployment_coordinator.compile_all(path)
-
-
-def _detect_device_configuration_names() -> List[str]:
-    """
-    Detect all device configuration names in the current working directory
-    :return: A list of device configuration names (filenames without extension)
-    """
-    path = Path(os.getcwd())
-    config_names = []
-    for file in path.glob("*.yaml"):
-        config_names.append(file.stem)
-
-    config_names = sorted(list(set(config_names)), key=lambda s: s.casefold())
-    config_names.remove('esphome_deployment')
-    config_names.remove('secrets')
-
-    return config_names
+            deployment_coordinator.compile_all(path=path, allow_downgrade=allow_downgrade)
 
 
 @cli.command(name="upload")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to upload (filename without extension)')
-def c_upload(name: Optional[str | list[str]]):
+def c_upload(
+    name: Optional[str | list[str]],
+    ignore_compile_version_mismatch: bool = False,
+    force: bool = False,
+):
     """
     Upload the given deployment(s)
     """
@@ -143,9 +137,17 @@ def c_upload(name: Optional[str | list[str]]):
 @cli.command(name="deploy")
 @click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to run (filename without extension)')
-def c_deploy(name: Optional[str | list[str]]):
+@click.option(*get_option_names(PARAM_DOWNGRADE_NAME), is_flag=True, default=False,
+              help='Allow downgrading ESPHome version when compiling')
+def c_deploy(
+    name: Optional[str | list[str]],
+    allow_downgrade: bool,
+):
     """
     Deploy (compile + upload) the given deployment(s)
+
+    :param name: The name(s) of the deployment(s) to deploy
+    :param allow_downgrade: Whether downgrading ESPHome version is allowed
     """
     names = name
     if isinstance(names, str):
@@ -162,9 +164,9 @@ def c_deploy(name: Optional[str | list[str]]):
     for name in names:
         if name:
             name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.deploy(name, path)
+            deployment_coordinator.deploy(name, path, allow_downgrade=allow_downgrade)
         else:
-            deployment_coordinator.deploy_all(path)
+            deployment_coordinator.deploy_all(path, allow_downgrade=allow_downgrade)
 
 
 @cli.command(name="clean")
@@ -195,6 +197,23 @@ def c_config():
 
     config = AppConfig()
     click.echo(config.print(TomlFormatter()))
+
+
+def _detect_device_configuration_names() -> List[str]:
+    """
+    Detect all device configuration names in the current working directory
+    :return: A list of device configuration names (filenames without extension)
+    """
+    path = Path(os.getcwd())
+    config_names = []
+    for file in path.glob("*.yaml"):
+        config_names.append(file.stem)
+
+    config_names = sorted(list(set(config_names)), key=lambda s: s.casefold())
+    config_names.remove('esphome_deployment')
+    config_names.remove('secrets')
+
+    return config_names
 
 
 if __name__ == '__main__':
