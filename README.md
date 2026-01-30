@@ -22,8 +22,9 @@ Unfortunately, ESPHome does not currently guarantee reproducible builds out of t
 there are a couple of small config options we can put into a package and include in all of our
 device configurations to help with this.
 
-### `esphome` Section
+### `esphome:` Section
 
+> `packages/esphome.yaml`
 ```yaml
 esphome:
   platformio_options:
@@ -35,8 +36,11 @@ esphome:
       - '-D__TIME__="\"23:00:00\""'
 ```
 
-### `esp32` Section
+See: https://esphome.io/components/esphome/
 
+### `esp32:` Section
+
+> `packages/chip/esp32-esp-idf.yaml`
 ```yaml
 esp32:
   framework:
@@ -48,6 +52,8 @@ esp32:
       CONFIG_APP_EXCLUDE_PROJECT_VER_VAR: y
       CONFIG_APP_EXCLUDE_PROJECT_NAME_VAR: y
 ```
+
+See: https://esphome.io/components/esp32/
 
 Note: The `esp8266` does **not** support or require any special options for reproducible builds at this time.
 Only the general `esphome` section as shown above is needed.
