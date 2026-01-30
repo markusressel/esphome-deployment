@@ -4,10 +4,10 @@ A CLI Tool for managing compilation and deployment of ESPHome Device configurati
 
 ## Features
 
-- Batch-Deploy ESPHome configurations
-- Build caching with reproducible builds
-- Only upload changed binaries
-- Deployment State Tracking via VCS (Git)
+- [x] Batch-Deploy ESPHome configurations
+- [x] Build caching with reproducible builds
+- [x] Only upload changed binaries
+- [x] Deployment State Tracking via VCS (Git)
 
 # Setup
 
