@@ -11,18 +11,20 @@ A CLI Tool for managing compilation and deployment of ESPHome Device configurati
 
 ## Prerequisites
 
-## Reproducible Builds
+### ESPHome CLI
 
-For the build and upload caching to work even across multiple machines and builds,
-the builds produced by ESPHome need to be made "reproducible". This means that
+This tool requires the ESPHome CLI to be installed and available within your system's PATH.
+See: https://esphome.io/guides/installing_esphome.html
+
+### Reproducible Builds
+
+For the caching mechanism of esphome-deployment to work across machines,
+the firmware images produced by ESPHome need to be made "reproducible". This means that
 given the same input, the build process should always produce the exact same output binary,
-bit for bit.
+bit for bit. Unfortunately, ESPHome does not currently guarantee reproducible builds out of the box, but
+there are a couple of options to remedy this:
 
-Unfortunately, ESPHome does not currently guarantee reproducible builds out of the box, but
-there are a couple of small config options we can put into a package and include in all of our
-device configurations to help with this.
-
-### `esphome:` Section
+#### `esphome:` Section
 
 > `packages/esphome.yaml`
 ```yaml
@@ -38,7 +40,7 @@ esphome:
 
 See: https://esphome.io/components/esphome/
 
-### `esp32:` Section
+#### `esp32:` Section
 
 > `packages/chip/esp32-esp-idf.yaml`
 ```yaml
@@ -64,8 +66,8 @@ Only the general `esphome` section as shown above is needed.
 2. Clone this repository as a git submodule next to your ESPHome configurations
     * e.g. `git submodule add https://github.com/markusressel/esphome-deployment`
 3. Ensure your configurations utilize the reproducible build options as shown above
-    * e.g. via packages for both ESPHome and ESP32 devices contanining the options above
-4. Use the CLI tool to compile and upload your configurations (see below)
+    * e.g. via packages for both ESPHome and ESP32 devices containing the options above
+4. Use `poetry` (or any other method of your choice) to run esphome-deployment (see below)
 
 ### Install Dependencies
 
@@ -129,4 +131,10 @@ Example:
 ```yaml
 .esphome_deployment:
   deploy: true
+
+packages:
+  esphome: !include packages/esphome.yaml
+  chip: !include packages/chip/esp32-esp-idf.yaml
+
+... rest of your esp home config ...
 ```
