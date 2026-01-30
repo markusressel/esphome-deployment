@@ -138,3 +138,29 @@ packages:
 
 ... rest of your esp home config ...
 ```
+
+## Example run
+
+```bash
+$ poetry run -P ./esphome-deployment esphome-deployment deploy -n quinled-an-penta-plus-markus-worktop.yaml                                                                                                                                                                                                                                                                                                                                         0 (0.000s) < 21:50:03
+2026-01-30 21:50:05,268 - esphome-deployment - INFO - === esphome-deployment ===
+2026-01-30 21:50:05,274 - esphome_deployment.deployment.deployment_coordinator - INFO - Deploying configuration for: quinled-an-penta-plus-markus-worktop
+2026-01-30 21:50:05,390 - esphome_deployment.deployment.deployment_coordinator - INFO - Executing esphome with arguments: ('compile', '/home/markus/programming/PycharmProjects/esphome-configs/quinled-an-penta-plus-markus-worktop.yaml')
+INFO ESPHome 2026.1.2
+INFO Reading configuration /home/markus/programming/PycharmProjects/esphome-configs/quinled-an-penta-plus-markus-worktop.yaml...
+... (truncated for brevity) ...
+Compiling .pioenvs/markus-worktop/src/esphome/components/api/api_connection.cpp.o
+Compiling .pioenvs/markus-worktop/src/esphome/components/api/api_frame_helper.cpp.o
+Compiling .pioenvs/markus-worktop/src/esphome/components/api/api_frame_helper_noise.cpp.o
+Compiling .pioenvs/markus-worktop/src/esphome/components/api/api_server.cpp.o
+Compiling .pioenvs/markus-worktop/src/esphome/components/api/list_entities.cpp.o
+Compiling .pioenvs/markus-worktop/src/esphome/components/api/subscribe_state.cpp.o
+... (truncated for brevity) ...
+INFO Uploading /home/markus/programming/PycharmProjects/esphome-configs/.esphome/build/markus-worktop/.pioenvs/markus-worktop/firmware.bin (872720 bytes)
+Uploading: [============================================================] 100% Done...
+
+INFO Upload took 5.28 seconds, waiting for result...
+INFO OTA successful
+INFO Successfully uploaded program.
+2026-01-30 21:50:31,601 - esphome_deployment.deployment.deployment_coordinator - INFO - Successfully uploaded configuration for 'quinled-an-penta-plus-markus-worktop'
+```
