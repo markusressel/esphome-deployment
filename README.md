@@ -54,8 +54,12 @@ Only the general `esphome` section as shown above is needed.
 
 ## Usage
 
-1. Clone this repository next to your ESPHome configurations
-2. Ensure your configurations utilize the reproducible build options as shown above
+1. Create a git repository to track your ESPHome configurations (if you don't have one already)
+2. Clone this repository as a git submodule next to your ESPHome configurations
+    * e.g. `git submodule add https://github.com/markusressel/esphome-deployment`
+3. Ensure your configurations utilize the reproducible build options as shown above
+    * e.g. via packages for both ESPHome and ESP32 devices contanining the options above
+4. Use the CLI tool to compile and upload your configurations (see below)
 
 ### Install Dependencies
 
@@ -65,14 +69,58 @@ python3 -m venv venv
 poetry install -P ./esphome-deployment
 ```
 
-### Compile a single Configuration
+## Usage
+
+### Compile ESPHome Firmwares
+
+```bash
+poetry run -P ./esphome-deployment esphome-deployment compile
+```
+
+Single Configuration:
 
 ```bash
 poetry run -P ./esphome-deployment esphome-deployment compile -n "your_epshome_config.yaml"
 ```
 
-### Upload a single Configuration
+### Upload compiled Firmware Images
+
+```bash
+poetry run -P ./esphome-deployment esphome-deployment upload
+```
+
+Filter by single Configuration:
 
 ```bash
 poetry run -P ./esphome-deployment esphome-deployment upload -n "your_epshome_config.yaml"
+```
+
+### Compile + Upload (Deploy)
+
+```bash
+poetry run -P ./esphome-deployment esphome-deployment deploy
+```
+
+Single Configuration:
+
+```bash
+poetry run -P ./esphome-deployment esphome-deployment deploy -n "your_epshome_config.yaml"
+```
+
+## Configuration
+
+### Main configuration
+
+The main configuration for esphome-deployment can be specified in a file named `esphome_deployment.yaml` located next to your ESPHome configurations (within your working
+directory).
+See [`esphome_deployment.yaml`](esphome_deployment.yaml) for all available options.
+
+### Per-Device configuration
+
+Each ESPHome configuration can optionally contain a `.esphome_deployment:` section (note the leading dot) to adjust the deployment behavior for that specific device.
+Example:
+
+```yaml
+.esphome_deployment:
+  deploy: true
 ```

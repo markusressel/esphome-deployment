@@ -30,6 +30,8 @@ class EspHomePackageReference:
 
 @dataclass
 class EspHomeDeploymentOptions:
+    # Whether to deploy this configuration (includes both build and upload)
+    # Can be used to ignore certain configurations during batch deployments
     deploy: bool = True
 
 
