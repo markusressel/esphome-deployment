@@ -9,7 +9,7 @@ A CLI Tool for managing compilation and deployment of ESPHome Device configurati
 - [x] Only upload changed binaries
 - [x] Deployment State Tracking via VCS (Git)
 
-# Setup
+## Prerequisites
 
 ## Reproducible Builds
 
@@ -52,7 +52,7 @@ esp32:
 Note: The `esp8266` does **not** support or require any special options for reproducible builds at this time.
 Only the general `esphome` section as shown above is needed.
 
-## Usage
+## Setup
 
 1. Create a git repository to track your ESPHome configurations (if you don't have one already)
 2. Clone this repository as a git submodule next to your ESPHome configurations
