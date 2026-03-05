@@ -406,6 +406,20 @@ class DeploymentCoordinator:
         """
         self.LOGGER.info(f"Executing esphome with arguments: {args}")
 
+        self._run_esphome_subprocess(*args)
+        # self._run_esphome_module(*args)
+
+    def _run_esphome_subprocess(self, *args):
+        subprocess.run(['esphome', *args], check=True)
+
+    def _run_esphome_module(self, *args):
+        """
+        TODO: Fails with strange errors, probably due to global state in esphome that is not properly reset between runs.
+         Needs investigation.
+
+        :param args:
+        :return:
+        """
         try:
             from esphome.__main__ import run_esphome as esphome_run_internal
             argv = ["esphome", *args]
