@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from esphome_deployment.deployment import EspHomeDeploymentConfiguration, CompileInfo, UploadInfo
+from esphome_deployment.util import load_json_file
 from esphome_deployment.util.semver import SemVerVersion
 
 
@@ -139,10 +140,6 @@ class DeploymentPersistence:
 
     def _load_deployment_file(self, target_file: Path) -> Optional[dict]:
         try:
-            with target_file.open('r', encoding='utf-8') as f:
-                data = json.load(f)
-                if not isinstance(data, dict):
-                    return None
-                return data
+            load_json_file(target_file)
         except Exception:
             return None

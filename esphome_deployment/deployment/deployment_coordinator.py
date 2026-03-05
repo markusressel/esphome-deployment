@@ -316,7 +316,13 @@ class DeploymentCoordinator:
         """
         try:
             self.LOGGER.debug(f"Uploading configuration: {deployment_config.name}")
-            self.run_esphome('upload', str(deployment_config.file_path))
+
+            ip_address = deployment_config.ip_address
+            if ip_address:
+                self.LOGGER.debug(f"Using custom IP address for upload: {ip_address}")
+                self.run_esphome('upload', '--device', ip_address, str(deployment_config.file_path))
+            else:
+                self.run_esphome('upload', str(deployment_config.file_path))
 
             self.LOGGER.info(f"Successfully uploaded configuration for '{deployment_config.name}'")
             self._remember_successful_upload(deployment_config)

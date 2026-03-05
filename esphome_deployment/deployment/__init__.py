@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 
 from ruamel.yaml.comments import TaggedScalar, CommentedMap
 
+from esphome_deployment.util import load_json_file
 from esphome_deployment.util.semver import SemVerVersion
 
 
@@ -58,8 +59,12 @@ class EspHomeDeploymentConfiguration:
         return self.parsed_yaml_content.get("esphome", {})
 
     @property
+    def _esphome_base_path(self) -> Path:
+        return self.path / ".esphome"
+
+    @property
     def build_path(self) -> Path:
-        build_path = self.path / ".esphome"
+        build_path = self._esphome_base_path
         esphome_name = self.esphome.get("name", None)
 
         build_path_config: Optional[str] = self.parsed_yaml_content.get("esphome", {}).get("build_path", None)
@@ -81,8 +86,24 @@ class EspHomeDeploymentConfiguration:
         return binary_file_path
 
     @property
+    def esphom_storage_data(self) -> Dict[str, Any]:
+        data_file_path = self._esphome_base_path / "storage" / f"{self.filename}.json"
+        try:
+            return load_json_file(data_file_path)
+        except Exception as ex:
+            return {}
+
+    @property
     def deploy(self) -> bool:
         return self.esphome_deployment_options.deploy
+
+    @property
+    def tags(self) -> List[str]:
+        return self.esphome_deployment_options.tags
+
+    @property
+    def ip_address(self) -> Optional[str]:
+        return self.esphom_storage_data.get("address", None)
 
     @property
     def esphome_deployment_options(self) -> EspHomeDeploymentOptions:

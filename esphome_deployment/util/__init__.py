@@ -123,3 +123,17 @@ def load_yaml_file(file_path: Path) -> Optional[Dict]:
     with file_path.open('r') as f:
         yaml = YAML(typ='rt', pure=True)
         return yaml.load(f)
+
+
+def load_json_file(file_path: Path) -> Optional[Dict]:
+    """
+    Load a JSON file and return its content as a dictionary.
+
+    :param file_path: Path to the JSON file.
+    :return: Content of the JSON file as a dictionary, or None if loading fails.
+    """
+    with file_path.open('r', encoding='utf-8') as f:
+        data = json.load(f)
+        if not isinstance(data, dict):
+            return None
+        return data
