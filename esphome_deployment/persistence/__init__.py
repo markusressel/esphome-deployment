@@ -140,6 +140,6 @@ class DeploymentPersistence:
 
     def _load_deployment_file(self, target_file: Path) -> Optional[dict]:
         try:
-            load_json_file(target_file)
+            return load_json_file(target_file)
         except Exception:
             return None
