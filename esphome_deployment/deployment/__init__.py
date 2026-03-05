@@ -1,5 +1,5 @@
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -33,6 +33,7 @@ class EspHomeDeploymentOptions:
     # Whether to deploy this configuration (includes both build and upload)
     # Can be used to ignore certain configurations during batch deployments
     deploy: bool = True
+    tags: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -87,7 +88,8 @@ class EspHomeDeploymentConfiguration:
     def esphome_deployment_options(self) -> EspHomeDeploymentOptions:
         options: Dict[str, Any] = self.parsed_yaml_content.get(".esphome_deployment", {})
         return EspHomeDeploymentOptions(
-            deploy=options.get("deploy", True)
+            deploy=options.get("deploy", True),
+            tags=options.get("tags", []),
         )
 
     @property
