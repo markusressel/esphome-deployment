@@ -123,8 +123,8 @@ class DeploymentPersistence:
         if target_file.exists():
             current_data = self._load_deployment_file(target_file) or {}
         # merge with new payload
-        current_data.update(payload)
-        payload = current_data
+        merged_data = current_data | payload
+        payload = merged_data
 
         tmp_file = target_file.with_suffix('.json.tmp')
         try:
