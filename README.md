@@ -131,6 +131,8 @@ Example:
 ```yaml
 .esphome_deployment:
   deploy: true
+  tags:
+    - bluetooth_proxy
 
 packages:
   esphome: !include packages/esphome.yaml
