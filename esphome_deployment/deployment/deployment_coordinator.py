@@ -405,7 +405,19 @@ class DeploymentCoordinator:
         :param args: the arguments to pass to esphome
         """
         self.LOGGER.info(f"Executing esphome with arguments: {args}")
-        subprocess.run(['esphome', *args], check=True)
+
+        try:
+            from esphome.__main__ import run_esphome as esphome_run_internal
+            argv = ["esphome", *args]
+            # This bypasses the zero-argument main() and goes to the logic
+            exit_code = esphome_run_internal(argv)
+
+            if exit_code != 0:
+                raise RuntimeError(f"ESPHome exited with code {exit_code}")
+
+        except Exception as e:
+            self.LOGGER.error(f"ESPHome execution failed: {e}")
+            raise
 
     @staticmethod
     def _get_current_esphome_version() -> SemVerVersion:
