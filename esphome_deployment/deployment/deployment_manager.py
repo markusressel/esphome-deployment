@@ -331,7 +331,7 @@ class DeploymentManager:
         command_name = args[0] if args else "unknown"
         log_file = log_dir / f"{deployment_config.name}_{command_name}_{timestamp}.log"
 
-        self.LOGGER.info(f"Running esphome command >> {log_file}")
+        self.LOGGER.info(f"Running 'esphome {args[0]}' >> {log_file}")
         self.LOGGER.debug(f"Executing esphome with arguments: {args} >> {log_file}")
 
         self._run_esphome_subprocess(log_file, *args)
