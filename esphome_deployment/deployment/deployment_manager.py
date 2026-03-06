@@ -40,7 +40,6 @@ class DeploymentManager:
         :param path: the path where the configuration file is located
         """
         file_path = path / f"{name}.yaml"
-        self.LOGGER.info(f"Cleaning deployment for configuration: {file_path}")
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
@@ -167,13 +166,11 @@ class DeploymentManager:
         :param deployment_configurations: the list of deployment configurations to filter
         :return: a list of deployment configurations that should be deployed
         """
-        self.LOGGER.debug(f"Filtering deployment configurations...")
-
         result = []
         for config in deployment_configurations:
             if not config.deploy:
-                self.LOGGER.warning(f"Skipping deployment for '{config.filename}' as per 'deploy' flag.")
-                raise DeploymentDisabledException(f"Deployment disabled for '{config.filename}' as per 'deploy' flag.")
+                self.LOGGER.warning(f"Skipping deployment as per 'deploy' flag")
+                raise DeploymentDisabledException(f"Deployment disabled for '{config.filename}' as per 'deploy' flag")
 
             result.append(config)
 
@@ -327,7 +324,8 @@ class DeploymentManager:
         Runs the esphome command with the given arguments
         :param args: the arguments to pass to esphome
         """
-        self.LOGGER.info(f"Executing esphome with arguments: {args}")
+        self.LOGGER.info(f"Running esphome command")
+        self.LOGGER.debug(f"Executing esphome with arguments: {args}")
 
         # Create the logs directory if it doesn't exist
         log_dir = deployment_config.file_path.parent / ".deployment-logs"
@@ -338,7 +336,7 @@ class DeploymentManager:
         command_name = args[0] if args else "unknown"
         log_file = log_dir / f"{deployment_config.name}_{command_name}_{timestamp}.log"
 
-        self.LOGGER.info(f"Executing esphome {args} -> Logging to {log_file}")
+        self.LOGGER.info(f"Logging to: {log_file}")
 
         self._run_esphome_subprocess(log_file, *args)
         # self._run_esphome_module(*args)

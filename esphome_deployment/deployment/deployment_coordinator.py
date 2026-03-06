@@ -80,16 +80,21 @@ class DeploymentCoordinator:
             worker_result = worker_fn(deployment_manager, name, path, *args, **kwargs)
             progress.mark_done(task_id, result=worker_result or WorkerResults.SUCCESS)
         except Exception as ex:
-            if isinstance(ex, UploadFailedException):
+            should_raise = True
+            if isinstance(ex, DeploymentDisabledException):
+                # Treat disabled deployments as a special case to avoid showing them as "Failed" in the UI.
+                worker_result = WorkerResults.Disabled
+                should_raise = False
+            elif isinstance(ex, UploadFailedException):
                 worker_result = WorkerResultCustom(state="Upload Failed", is_success=False)
             elif isinstance(ex, CompileFailedException):
                 worker_result = WorkerResultCustom(state="Compile Failed", is_success=False)
-            elif isinstance(ex, DeploymentDisabledException):
-                worker_result = WorkerResults.Disabled
             else:
                 worker_result = WorkerResults.FAILURE
+
             progress.mark_done(task_id, result=worker_result)
-            raise
+            if should_raise:
+                raise ex
 
     def clean(
         self,
