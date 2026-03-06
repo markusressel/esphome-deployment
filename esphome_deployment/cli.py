@@ -242,7 +242,6 @@ def _detect_device_configuration_names(
     config_names.remove('secrets')
 
     if not name and not tag:
-        print(f"Detected device configurations: {', '.join(config_names)}")
         return config_names
 
     named_config_names = []

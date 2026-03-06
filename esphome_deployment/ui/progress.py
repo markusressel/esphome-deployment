@@ -1,11 +1,54 @@
 from __future__ import annotations
 
+import logging
 import threading
+from abc import ABC
 from typing import Dict, Optional
 
 from rich.console import Console
 from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn, TaskID
+
+from esphome_deployment.log_stuff import ProgressAwareLoggingHandler
+
+
+class WorkerResult(ABC):
+
+    def is_success(self) -> bool:
+        return False
+
+
+class WorkerSucceeded(WorkerResult):
+
+    def is_success(self) -> bool:
+        return True
+
+    def __str__(self):
+        return "Success"
+
+
+class WorkerFailed(WorkerResult):
+
+    def __str__(self):
+        return "Failed"
+
+
+class WorkerResultCustom(WorkerResult):
+
+    def __init__(self, state: str, is_success: bool):
+        self.state = state
+        self._is_success = is_success
+
+    def is_success(self) -> bool:
+        return self._is_success
+
+    def __str__(self):
+        return self.state
+
+
+class WorkerResults:
+    SUCCESS = WorkerSucceeded()
+    FAILURE = WorkerFailed()
 
 
 class ParallelProgress:
@@ -36,9 +79,23 @@ class ParallelProgress:
         self._lock = threading.Lock()
         self._live: Optional[Live] = None
 
+        self._handler = ProgressAwareLoggingHandler(console=self.console)
+
     def __enter__(self):
-        # start live rendering
-        self._live = Live(self._progress, console=self.console, refresh_per_second=10)
+        # 1. Capture original handlers and replace with our Rich handler
+        root_logger = logging.getLogger()
+        self._original_handlers = root_logger.handlers[:]
+        for h in self._original_handlers:
+            root_logger.removeHandler(h)
+        root_logger.addHandler(self._handler)
+
+        # 2. start live rendering
+        self._live = Live(
+            self._progress,
+            console=self.console,
+            refresh_per_second=10,
+            auto_refresh=True,
+        )
         self._live.__enter__()
         return self
 
@@ -47,6 +104,12 @@ class ParallelProgress:
         if self._live:
             self._live.__exit__(exc_type, exc, tb)
             self._live = None
+
+        # Restore original logging handlers
+        root_logger = logging.getLogger()
+        root_logger.removeHandler(self._handler)
+        for h in self._original_handlers:
+            root_logger.addHandler(h)
 
     def add_task(self, name: str) -> TaskID:
         with self._lock:
@@ -59,19 +122,31 @@ class ParallelProgress:
         with self._lock:
             self._progress.update(TaskID(task_id), state="running", state_color="cyan")
 
-    def mark_done(self, task_id: TaskID, success: bool = True):
+    def update_status(self, task_id: TaskID, state: str, color: str, progress: Optional[float] = None):
+        """
+        :param task_id: the id of the task to update (as returned by add_task)
+        :param state: arbitrary text to display as the current state of this task
+        :param color: the color to use for the state text (e.g. "green", "red", "yellow", "cyan", etc.)
+        :param progress: 0 - 100
+        """
         with self._lock:
-            state = "done" if success else "failed"
-            color = "green" if success else "red"
-            self._progress.update(TaskID(task_id), state=state, state_color=color, completed=0)
+            self._progress.update(TaskID(task_id), state=state, state_color=color, completed=progress)
+
+    def mark_done(self, task_id: TaskID, result: WorkerResult = WorkerResults.SUCCESS):
+        with self._lock:
+            state = result.__str__()
+            completed = 1 if result.is_success() else 0
+            color = "green" if result.is_success() else "red"
+            self.update_status(
+                task_id=task_id,
+                state=state,
+                color=color,
+                progress=completed
+            )
             try:
                 self._progress.stop_task(TaskID(task_id))
             except Exception:
                 pass
-
-    def write(self, *args, **kwargs):
-        # convenience passthrough
-        self.console.print(*args, **kwargs)
 
     def stop(self):
         if self._live:

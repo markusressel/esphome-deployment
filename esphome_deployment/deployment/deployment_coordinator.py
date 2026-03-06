@@ -6,8 +6,8 @@ from typing import List, cast
 from rich.progress import TaskID
 
 from esphome_deployment.deployment import CompileOptions, UploadOptions
-from esphome_deployment.deployment.deployment_manager import DeploymentManager
-from esphome_deployment.ui.progress import ParallelProgress
+from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException
+from esphome_deployment.ui.progress import ParallelProgress, WorkerResults, WorkerResultCustom
 
 
 class DeploymentCoordinator:
@@ -25,35 +25,34 @@ class DeploymentCoordinator:
         worker_fn,
         path: Path,
         *args,
-        max_workers: int = 4, **kwargs
+        max_workers: int = 4,
+        **kwargs
     ):
         """
         Runs the given worker_fn (callable accepting (name, path, *args, **kwargs)) in a thread pool
         and displays a parallel progress spinner per deployment using ParallelProgress.
-        """
-        # If only one job, run synchronously to preserve existing behavior/logging
-        if len(names) <= 1:
-            for single_name in names:
-                deployment_manager = DeploymentManager(persistence=self._persistence)
-                worker_fn(deployment_manager, single_name, path, *args, **kwargs)
-            return
 
-        tasks = {}
+        Note: Also does this if there is only one name, to ensure consistent output and progress display.
+        """
         with ParallelProgress() as progress:
             with ThreadPoolExecutor(max_workers=min(max_workers, len(names))) as executor:
                 future_to_name = {}
                 for name in names:
-                    # register a task in the progress UI
                     raw_task_id = progress.add_task(name)
                     task_id = cast(TaskID, raw_task_id)
-                    # submit job
                     future = executor.submit(self._wrapped_worker, progress, task_id, worker_fn, name, path, *args, **kwargs)
                     future_to_name[future] = name
 
-                # wait for all to finish and propagate exceptions after marking status
+                # IMPORTANT: Do not call future.result() in a loop that blocks
+                # the whole method if you want to see updates.
+                # Rich's Live display runs in its own background thread,
+                # but we need to ensure we don't exit the 'with' block prematurely.
+
                 for future in as_completed(future_to_name):
                     name = future_to_name[future]
                     try:
+                        # This will now only block until THE NEXT future is done,
+                        # allowing the progress bars for others to continue spinning.
                         future.result()
                     except Exception as e:
                         self.LOGGER.error(f"Deployment for '{name}' failed: {e}")
@@ -64,9 +63,13 @@ class DeploymentCoordinator:
         try:
             progress.set_running(task_id)
             worker_fn(deployment_manager, name, path, *args, **kwargs)
-            progress.mark_done(task_id, success=True)
-        except Exception:
-            progress.mark_done(task_id, success=False)
+            progress.mark_done(task_id, result=WorkerResults.SUCCESS)
+        except Exception as ex:
+            if isinstance(ex, UploadFailedException):
+                worker_result = WorkerResultCustom(state="Upload Failed", is_success=False)
+            else:
+                worker_result = WorkerResults.FAILURE
+            progress.mark_done(task_id, result=worker_result)
             raise
 
     def clean(
