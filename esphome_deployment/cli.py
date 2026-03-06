@@ -12,6 +12,7 @@ from container_app_conf.formatter.toml import TomlFormatter
 from esphome_deployment.config import AppConfig
 from esphome_deployment.deployment import EspHomeDeploymentConfiguration
 from esphome_deployment.deployment.deployment_coordinator import DeploymentCoordinator, CompileOptions, UploadOptions
+from esphome_deployment.deployment.deployment_manager import DeploymentManager
 from esphome_deployment.persistence import DeploymentPersistence
 from esphome_deployment.util import load_yaml_file
 
@@ -238,8 +239,10 @@ def _detect_device_configuration_names(
         config_names.append(file.stem)
 
     config_names = sorted(list(set(config_names)), key=lambda s: s.casefold())
-    config_names.remove('esphome_deployment')
-    config_names.remove('secrets')
+    for n in DeploymentManager.BLACKLISTED_FILES:
+        n = n.removesuffix('.yaml').removesuffix('.yml')
+        if n in config_names:
+            config_names.remove(n)
 
     if not name and not tag:
         return config_names

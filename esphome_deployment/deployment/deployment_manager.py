@@ -19,6 +19,7 @@ class DeploymentManager:
     DEFAULT_LOGGER = logging.getLogger(__name__)
 
     BLACKLISTED_FILES = {
+        ".esphome_deployment.yaml",
         "esphome_deployment.yaml",
         "secrets.yaml",
     }
