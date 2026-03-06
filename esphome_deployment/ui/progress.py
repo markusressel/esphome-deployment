@@ -132,12 +132,21 @@ class ParallelProgress:
         with self._lock:
             self._progress.update(TaskID(task_id), state=state, state_color=color, completed=progress)
 
+    def _update_status(self, task_id: TaskID, state: str, color: str, progress: Optional[float] = None):
+        """
+        :param task_id: the id of the task to update (as returned by add_task)
+        :param state: arbitrary text to display as the current state of this task
+        :param color: the color to use for the state text (e.g. "green", "red", "yellow", "cyan", etc.)
+        :param progress: 0 - 100
+        """
+        self._progress.update(TaskID(task_id), state=state, state_color=color, completed=progress, total=100)
+
     def mark_done(self, task_id: TaskID, result: WorkerResult = WorkerResults.SUCCESS):
         with self._lock:
             state = result.__str__()
-            completed = 1 if result.is_success() else 0
+            completed = 100 if result.is_success() else 0
             color = "green" if result.is_success() else "red"
-            self.update_status(
+            self._update_status(
                 task_id=task_id,
                 state=state,
                 color=color,
