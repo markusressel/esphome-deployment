@@ -28,18 +28,11 @@ class DeploymentManager:
         """
         file_path = path / f"{name}.yaml"
         self.LOGGER.info(f"Cleaning deployment for configuration: {file_path}")
-        self.run_esphome('clean', str(file_path))
-
-    def clean_all(self, path: Path = Path('./')):
-        """
-        Cleans the deployments for all configurations found in the given path
-        :param path: the path to search for configurations
-        """
-        configuration_files = self.find_esphome_configuration_files(path)
-        self.LOGGER.info(f"Found {len(configuration_files)} configurations to clean")
-
-        for config_file in configuration_files:
-            self.clean(config_file.stem, path)
+        file_paths = [file_path]
+        deployment_configuration = self.load_deployment_configurations(file_paths)
+        filtered_deployments = self.filter_deployments(deployment_configuration)
+        for deployment_config in filtered_deployments:
+            self.run_esphome(deployment_config, 'clean', str(file_path))
 
     def compile(
         self,
@@ -62,32 +55,6 @@ class DeploymentManager:
             compile_options=compile_options
         )
 
-    def compile_all(
-        self,
-        path: Path = Path('./'),
-        compile_options: CompileOptions = CompileOptions()
-    ):
-        """
-        Compiles all configurations found in the given path
-        :param path: the path to search for configurations
-        :param compile_options: options for compilation
-        """
-        configuration_files = self.find_esphome_configuration_files(path)
-        self.LOGGER.info(f"Found {len(configuration_files)} configurations")
-
-        deployment_configurations: List[EspHomeDeploymentConfiguration] = self.load_deployment_configurations(
-            configuration_files)
-        self.LOGGER.info(f"Loaded {len(deployment_configurations)} deployment configurations")
-
-        filtered_deployments = self.filter_deployments(deployment_configurations)
-        skipped_count = len(deployment_configurations) - len(filtered_deployments)
-        self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
-
-        self.compile_deployment_configs_if_needed(
-            deployment_configs=filtered_deployments,
-            compile_options=compile_options
-        )
-
     def upload(self, name: str, path: Path, upload_options: UploadOptions = UploadOptions()):
         """
         Uploads a specific configuration
@@ -99,33 +66,6 @@ class DeploymentManager:
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
-        for filtered_deployment in filtered_deployments:
-            self.upload_deployment_config_if_needed(
-                deployment_config=filtered_deployment,
-                upload_options=upload_options
-            )
-
-    def upload_all(
-        self,
-        path: Path = Path('./'),
-        upload_options: UploadOptions = UploadOptions()
-    ):
-        """
-        Uploads all configurations found in the given path
-        :param path: the path to search for configurations
-        :param upload_options: options for upload
-        """
-        configuration_files = self.find_esphome_configuration_files(path)
-        self.LOGGER.info(f"Found {len(configuration_files)} configurations")
-
-        deployment_configurations: List[EspHomeDeploymentConfiguration] = self.load_deployment_configurations(
-            configuration_files)
-        self.LOGGER.info(f"Loaded {len(deployment_configurations)} deployment configurations")
-
-        filtered_deployments = self.filter_deployments(deployment_configurations)
-        skipped_count = len(deployment_configurations) - len(filtered_deployments)
-        self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
-
         for filtered_deployment in filtered_deployments:
             self.upload_deployment_config_if_needed(
                 deployment_config=filtered_deployment,
@@ -150,35 +90,6 @@ class DeploymentManager:
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
-        self.deploy_deployment_configs_if_needed(
-            deployment_configs=filtered_deployments,
-            compile_options=compile_options,
-            upload_options=upload_options
-        )
-
-    def deploy_all(
-        self,
-        path: Path = Path('./'),
-        compile_options: CompileOptions = CompileOptions(),
-        upload_options: UploadOptions = UploadOptions(),
-    ):
-        """
-        Deploys all configurations found in the given path
-        :param path: the path to search for configurations
-        :param compile_options: options for compilation
-        :param upload_options: options for upload
-        """
-        configuration_files = self.find_esphome_configuration_files(path)
-        self.LOGGER.info(f"Found {len(configuration_files)} configurations")
-
-        deployment_configurations: List[EspHomeDeploymentConfiguration] = self.load_deployment_configurations(
-            configuration_files)
-        self.LOGGER.info(f"Loaded {len(deployment_configurations)} deployment configurations")
-
-        filtered_deployments = self.filter_deployments(deployment_configurations)
-        skipped_count = len(deployment_configurations) - len(filtered_deployments)
-        self.LOGGER.info(f"{len(filtered_deployments)} configurations remain after filtering ({skipped_count} skipped)")
-
         self.deploy_deployment_configs_if_needed(
             deployment_configs=filtered_deployments,
             compile_options=compile_options,
@@ -285,7 +196,7 @@ class DeploymentManager:
         """
         try:
             self.LOGGER.debug(f"Compiling configuration: {deployment_config.name}")
-            self.run_esphome('compile', str(deployment_config.file_path))
+            self.run_esphome(deployment_config, 'compile', str(deployment_config.file_path))
 
             self.LOGGER.info(f"Successfully compiled configuration for '{deployment_config.name}'")
             self._remember_successful_compile(deployment_config)
@@ -304,9 +215,9 @@ class DeploymentManager:
             ip_address = deployment_config.ip_address
             if ip_address:
                 self.LOGGER.debug(f"Using custom IP address for upload: {ip_address}")
-                self.run_esphome('upload', '--device', ip_address, str(deployment_config.file_path))
+                self.run_esphome(deployment_config, 'upload', '--device', ip_address, str(deployment_config.file_path))
             else:
-                self.run_esphome('upload', str(deployment_config.file_path))
+                self.run_esphome(deployment_config, 'upload', str(deployment_config.file_path))
 
             self.LOGGER.info(f"Successfully uploaded configuration for '{deployment_config.name}'")
             self._remember_successful_upload(deployment_config)
@@ -389,18 +300,38 @@ class DeploymentManager:
             return None
         return calculate_md5_file(deployment_config.binary_file_path)
 
-    def run_esphome(self, *args):
+    def run_esphome(self, deployment_config: EspHomeDeploymentConfiguration, *args):
         """
         Runs the esphome command with the given arguments
         :param args: the arguments to pass to esphome
         """
         self.LOGGER.info(f"Executing esphome with arguments: {args}")
 
-        self._run_esphome_subprocess(*args)
+        # Create the logs directory if it doesn't exist
+        log_dir = deployment_config.file_path.parent / ".deployment-logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a unique filename: e.g., livingroom_compile_20231027_123005.log
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        command_name = args[0] if args else "unknown"
+        log_file = log_dir / f"{deployment_config.name}_{command_name}_{timestamp}.log"
+
+        self.LOGGER.info(f"Executing esphome {args} -> Logging to {log_file}")
+
+        self._run_esphome_subprocess(log_file, *args)
         # self._run_esphome_module(*args)
 
-    def _run_esphome_subprocess(self, *args):
-        subprocess.run(['esphome', *args], check=True)
+    def _run_esphome_subprocess(self, log_file: Path, *args):
+        with open(log_file, "w", encoding="utf-8") as f:
+            # We use stdout=f and stderr=subprocess.STDOUT to merge both
+            # streams into the same log file.
+            subprocess.run(
+                ['esphome', *args],
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                check=True,
+                text=True
+            )
 
     def _run_esphome_module(self, *args):
         """
