@@ -15,6 +15,10 @@ class CompileFailedException(Exception):
 class UploadFailedException(Exception):
     pass
 
+
+class DeploymentDisabledException(Exception):
+    pass
+
 class DeploymentManager:
     DEFAULT_LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +44,9 @@ class DeploymentManager:
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
+        if len(filtered_deployments) > 1:
+            raise ValueError(
+                f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
         for deployment_config in filtered_deployments:
             self.run_esphome(deployment_config, 'clean', str(file_path))
 
@@ -59,6 +66,9 @@ class DeploymentManager:
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
+        if len(filtered_deployments) > 1:
+            raise ValueError(
+                f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
         self.compile_deployment_configs_if_needed(
             deployment_configs=filtered_deployments,
             compile_options=compile_options
@@ -75,6 +85,9 @@ class DeploymentManager:
         file_paths = [file_path]
         deployment_configuration = self.load_deployment_configurations(file_paths)
         filtered_deployments = self.filter_deployments(deployment_configuration)
+        if len(filtered_deployments) > 1:
+            raise ValueError(
+                f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
         for filtered_deployment in filtered_deployments:
             self.upload_deployment_config_if_needed(
                 deployment_config=filtered_deployment,
@@ -160,7 +173,7 @@ class DeploymentManager:
         for config in deployment_configurations:
             if not config.deploy:
                 self.LOGGER.warning(f"Skipping deployment for '{config.filename}' as per 'deploy' flag.")
-                continue
+                raise DeploymentDisabledException(f"Deployment disabled for '{config.filename}' as per 'deploy' flag.")
 
             result.append(config)
 

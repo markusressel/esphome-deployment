@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.progress import TaskID
 
 from esphome_deployment.deployment import CompileOptions, UploadOptions
-from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException
+from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException, DeploymentDisabledException
 from esphome_deployment.persistence import DeploymentPersistence
 from esphome_deployment.ui.parallel_progress import ParallelProgress, WorkerResults, WorkerResultCustom
 
@@ -73,6 +73,8 @@ class DeploymentCoordinator:
                 worker_result = WorkerResultCustom(state="Upload Failed", is_success=False)
             elif isinstance(ex, CompileFailedException):
                 worker_result = WorkerResultCustom(state="Compile Failed", is_success=False)
+            elif isinstance(ex, DeploymentDisabledException):
+                worker_result = WorkerResults.Disabled
             else:
                 worker_result = WorkerResults.FAILURE
             progress.mark_done(task_id, result=worker_result)
