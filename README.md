@@ -131,9 +131,9 @@ poetry run -P ./esphome-deployment esphome-deployment deploy -n "your_epshome_co
 
 ### Main configuration
 
-The main configuration for esphome-deployment can be specified in a file named `esphome_deployment.yaml` located next to your ESPHome configurations (within your working
+The main configuration for esphome-deployment can be specified in a file named `.esphome_deployment.yaml` located next to your ESPHome configurations (within your working
 directory).
-See [`esphome_deployment.yaml`](esphome_deployment.yaml) for all available options.
+See [`.esphome_deployment.yaml`](.esphome_deployment.yaml) for all available options.
 
 ### Per-Device configuration
 
