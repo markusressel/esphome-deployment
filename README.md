@@ -30,10 +30,10 @@ See: https://esphome.io/guides/installing_esphome.html
 ### Reproducible Builds
 
 For the caching mechanism of esphome-deployment to work across machines,
-the firmware images produced by ESPHome need to be made "reproducible". This means that
+the firmware images produced by ESPHome need to be made _reproducible_. This means that
 given the same input, the build process should always produce the exact same output binary,
 bit for bit. Unfortunately, ESPHome does not currently guarantee reproducible builds out of the box, but
-there are a couple of options to remedy this:
+there are a couple of options we can add to our configuration YAML to remedy this:
 
 #### `esphome:` Section
 
