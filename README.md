@@ -150,6 +150,63 @@ packages:
 ... rest of your esp home config ...
 ```
 
+## Repository layout, state files and logs
+
+Recommended layout for a repository using `esphome-deployment` to deploy multiple ESPHome configurations:
+
+```
+<repo-root>/
+├── packages/                # reusable package files (recommended)
+│   ├── esphome.yaml
+│   └── chip/...
+├── .deployment-state/       # (generated) per-deployment JSON state files
+├── .deployment-logs/        # (generated) CLI logs for compile/upload runs
+├── .esphome_deployment.yaml  # global config for esphome-deployment
+├── secrets.yaml
+├── your-device-1.yaml       # individual deployment yamls (put in repo root)
+└── your-device-2.yaml
+```
+
+- Place your device YAMLs (the files you pass to the CLI) in the repository root (next to `esphome_deployment.yaml`).
+- Put reusable includes, packages and chip settings under `packages/` and include them from your device YAMLs (this repository already uses that convention).
+
+Managing `.deployment-state` files
+
+- What they are: The tool writes one JSON file per deployment into `.deployment-state/` (filename `<deployment_name>.json`). These files store the last successful compile/upload
+  metadata (config hash, esphome version, binary hash, timestamps).
+- Share state across machines (recommended): Commit the `.deployment-state/*.json` files into your VCS (e.g.,
+  `git add .deployment-state/*.json && git commit -m "track deployment state"`). This allows multiple machines and CI runners to share the same remembered state so that unchanged
+  devices are skipped correctly.
+- Make state local-only (alternative): If you prefer the state to be machine-local, add `.deployment-state/` to `.gitignore` and do not commit those files.
+- Resetting state: To force the tool to forget remembered compiles/uploads for a device, delete the corresponding JSON file from `.deployment-state/` and (if tracked) commit the
+  removal.
+
+Managing `.deployment-logs`
+
+- What they are: For every esphome invocation the CLI writes a log into `.deployment-logs/` in the same directory as your device YAMLs. Filenames are like
+  `<deployment>_<command>_YYYYMMDD_HHMMSS.log` and contain merged stdout/stderr from the esphome CLI. These logs are invaluable for debugging compile/upload issues.
+- Git handling: Logs are usually noisy and can contain large output. We recommend adding `.deployment-logs/` to your `.gitignore`:
+
+```gitignore
+# Ignore generated logs from esphome-deployment
+.deployment-logs/
+```
+
+- Inspecting logs:
+
+```bash
+# list recent logs
+ls -lt .deployment-logs/
+
+# view a specific log
+less .deployment-logs/<filename>.log
+
+# follow a log in real time
+tail -f .deployment-logs/<filename>.log
+```
+
+- Privacy note: Logs may contain IPs, device identifiers or other runtime information. Treat them as potentially sensitive when sharing.
+
 ## Example run
 
 ```bash
