@@ -203,8 +203,6 @@ class DeploymentManager:
         :param compile_options: options for compilation
         :param upload_options: options for upload
         """
-        self.LOGGER.info(f"Deploying configuration for: {deployment_config.name}")
-
         self.compile_deployment_config_if_needed(deployment_config=deployment_config, compile_options=compile_options)
         self.upload_deployment_config_if_needed(deployment_config=deployment_config, upload_options=upload_options)
 
@@ -214,13 +212,13 @@ class DeploymentManager:
         :param deployment_config: the deployment configuration to compile
         """
         try:
-            self.LOGGER.debug(f"Compiling configuration: {deployment_config.name}")
+            self.LOGGER.debug(f"Compiling firmware...")
             self.run_esphome(deployment_config, 'compile', str(deployment_config.file_path))
 
-            self.LOGGER.info(f"Successfully compiled configuration for '{deployment_config.name}'")
+            self.LOGGER.info(f"Successfully compiled")
             self._remember_successful_compile(deployment_config)
         except Exception as e:
-            self.LOGGER.error(f"Failed to compile configuration for '{deployment_config.name}': {e}")
+            self.LOGGER.error(f"Compilation failed: {e}")
             raise CompileFailedException(f"Failed to compile configuration for '{deployment_config.name}': {e}") from e
 
     def upload_configuration(self, deployment_config: EspHomeDeploymentConfiguration):
@@ -229,7 +227,7 @@ class DeploymentManager:
         :param deployment_config: the deployment configuration to upload
         """
         try:
-            self.LOGGER.debug(f"Uploading configuration: {deployment_config.name}")
+            self.LOGGER.debug(f"Uploading firmware...")
 
             ip_address = deployment_config.ip_address
             if ip_address:
@@ -238,10 +236,10 @@ class DeploymentManager:
             else:
                 self.run_esphome(deployment_config, 'upload', str(deployment_config.file_path))
 
-            self.LOGGER.info(f"Successfully uploaded configuration for '{deployment_config.name}'")
+            self.LOGGER.info(f"Successfully uploaded")
             self._remember_successful_upload(deployment_config)
         except Exception as e:
-            self.LOGGER.error(f"Failed to upload configuration for '{deployment_config.name}': {e}")
+            self.LOGGER.error(f"Upload failed: {e}")
             raise UploadFailedException(f"Failed to upload configuration for '{deployment_config.name}': {e}") from e
 
     def _remember_successful_compile(self, deployment_config: EspHomeDeploymentConfiguration) -> CompileInfo:
@@ -252,7 +250,7 @@ class DeploymentManager:
         :param deployment_config: the deployment configuration that was successfully compiled
         :return: a RememberedCompileInfo instance representing the remembered compile info
         """
-        self.LOGGER.debug(f"Remembering successful compile for configuration: {deployment_config.name}")
+        self.LOGGER.debug(f"Remembering compilation success")
         config_hash = self._calculate_config_hash(deployment_config)
         if config_hash is None:
             raise ValueError("Config hash cannot be None")
@@ -280,7 +278,7 @@ class DeploymentManager:
 
         :param deployment_config: the deployment configuration that was successfully uploaded
         """
-        self.LOGGER.debug(f"Remembering successful upload for configuration: {deployment_config.name}")
+        self.LOGGER.debug(f"Remembering upload success")
 
         binary_hash = self._calculate_firmware_binary_hash(deployment_config)
         if binary_hash is None:
@@ -324,9 +322,6 @@ class DeploymentManager:
         Runs the esphome command with the given arguments
         :param args: the arguments to pass to esphome
         """
-        self.LOGGER.info(f"Running esphome command")
-        self.LOGGER.debug(f"Executing esphome with arguments: {args}")
-
         # Create the logs directory if it doesn't exist
         log_dir = deployment_config.file_path.parent / ".deployment-logs"
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -336,7 +331,8 @@ class DeploymentManager:
         command_name = args[0] if args else "unknown"
         log_file = log_dir / f"{deployment_config.name}_{command_name}_{timestamp}.log"
 
-        self.LOGGER.info(f"Logging to: {log_file}")
+        self.LOGGER.info(f"Running esphome command >> {log_file}")
+        self.LOGGER.debug(f"Executing esphome with arguments: {args} >> {log_file}")
 
         self._run_esphome_subprocess(log_file, *args)
         # self._run_esphome_module(*args)
@@ -421,10 +417,10 @@ class DeploymentManager:
 
             if current_esphome_version < compile_info.esphome_version:
                 self.LOGGER.warning(
-                    f"Detected downgrade of esphome version for '{deployment_config.name}': {current_esphome_version} < {compile_info.esphome_version}.")
+                    f"Detected downgrade of esphome version: {current_esphome_version} < {compile_info.esphome_version}.")
                 if not compile_options.allow_downgrade:
                     raise AssertionError("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
-                self.LOGGER.info(f"Allowing downgrade for '{deployment_config.name}' as per '--allow-downgrade' flag, proceeding with compile.")
+                self.LOGGER.info(f"Allowing ESPHome version downgrade as per '--allow-downgrade' flag, proceeding with compile.")
                 self.compile_configuration(deployment_config)
                 return
 
@@ -432,7 +428,7 @@ class DeploymentManager:
                 compile_info.esphome_version == current_esphome_version and
                 compile_info.binary_hash == current_firmware_binary_hash):
                 self.LOGGER.warning(
-                    f"Skipping compile for '{deployment_config.name}': configuration unchanged and already compiled with esphome version {current_esphome_version}.")
+                    f"Skipping compile: Configuration unchanged and already compiled with esphome version {current_esphome_version}.")
                 return
 
         self.compile_configuration(deployment_config)
@@ -449,7 +445,7 @@ class DeploymentManager:
         :param upload_options: options for upload
         """
         if not deployment_config.binary_file_path.exists():
-            raise FileNotFoundError(f"Firmware binary not found for '{deployment_config.name}': {deployment_config.binary_file_path}, please compile first.")
+            raise FileNotFoundError(f"Firmware binary not found: {deployment_config.binary_file_path}, please compile first.")
         compile_info: Optional[CompileInfo] = self._get_remembered_compile_info(deployment_config)
         upload_info: Optional[UploadInfo] = self._get_remembered_upload_info(deployment_config)
         if upload_info is not None:
@@ -463,11 +459,11 @@ class DeploymentManager:
 
             if upload_info.binary_hash == current_binary_hash:
                 self.LOGGER.warning(
-                    f"Local firmware binary already uploaded for '{deployment_config.name}'.")
+                    f"Local firmware binary already uploaded")
                 if not upload_options.force:
-                    self.LOGGER.info(f"Skipping upload for '{deployment_config.name}'.")
+                    self.LOGGER.info(f"Skipping upload")
                     return
                 else:
-                    self.LOGGER.info(f"Forcing upload for '{deployment_config.name}' as per '--force' flag.")
+                    self.LOGGER.info(f"Forcing upload as per '--force' flag.")
 
         self.upload_configuration(deployment_config)
