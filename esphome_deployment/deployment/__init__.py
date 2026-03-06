@@ -10,6 +10,21 @@ from esphome_deployment.util.semver import SemVerVersion
 
 
 @dataclass
+class CompileOptions:
+    # whether to allow downgrading ESPHome version when compiling
+    allow_downgrade: bool = False
+
+
+@dataclass
+class UploadOptions:
+    # whether to force the upload even if the state tells us that we have already uploaded this firmware binary
+    force: bool = False
+
+    # whether to ignore mismatches between the locally present compiled binary and the last known compiled one
+    ignore_compiled_binary_mismatch: bool = False
+
+
+@dataclass
 class CompileInfo:
     config_hash: str
     esphome_version: SemVerVersion

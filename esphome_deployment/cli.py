@@ -102,12 +102,8 @@ def c_compile(
     deployment_coordinator = DeploymentCoordinator(persistence=persistence)
 
     compile_options = CompileOptions(allow_downgrade=allow_downgrade)
-    for name in names:
-        if name:
-            name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.compile(name=name, path=path, compile_options=compile_options)
-        else:
-            deployment_coordinator.compile_all(path=path, compile_options=compile_options)
+
+    deployment_coordinator.compile(name=names, path=path, compile_options=compile_options)
 
 
 @cli.command(name="upload")
@@ -140,12 +136,8 @@ def c_upload(
         force=force,
         ignore_compiled_binary_mismatch=ignore_compiled_binary_mismatch,
     )
-    for name in names:
-        if name:
-            name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.upload(name=name, path=path, upload_options=upload_options)
-        else:
-            deployment_coordinator.upload_all(path=path, upload_options=upload_options)
+
+    deployment_coordinator.upload(name=names, path=path, upload_options=upload_options)
 
 
 @cli.command(name="deploy")
@@ -188,12 +180,8 @@ def c_deploy(
         force=force,
         ignore_compiled_binary_mismatch=ignore_compiled_binary_mismatch,
     )
-    for name in names:
-        if name:
-            name = name.removesuffix('.yaml').removesuffix('.yml')
-            deployment_coordinator.deploy(name=name, path=path, compile_options=compile_options, upload_options=upload_options)
-        else:
-            deployment_coordinator.deploy_all(path=path, compile_options=compile_options, upload_options=upload_options)
+
+    deployment_coordinator.deploy(name=names, path=path, compile_options=compile_options, upload_options=upload_options)
 
 
 @cli.command(name="clean")
@@ -216,9 +204,7 @@ def c_clean(
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence)
 
-    for name in names:
-        name = name.removesuffix('.yaml').removesuffix('.yml')
-        deployment_coordinator.clean(name=name, path=path)
+    deployment_coordinator.clean(name=names, path=path)
 
 
 @cli.command(name="config")
