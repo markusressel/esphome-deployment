@@ -9,6 +9,9 @@ from esphome_deployment.util import calculate_md5_file, calculate_md5_yaml_recur
 from esphome_deployment.util.semver import SemVerVersion
 
 
+class CompileFailedException(Exception):
+    pass
+
 class UploadFailedException(Exception):
     pass
 
@@ -205,7 +208,7 @@ class DeploymentManager:
             self._remember_successful_compile(deployment_config)
         except Exception as e:
             self.LOGGER.error(f"Failed to compile configuration for '{deployment_config.name}': {e}")
-            raise
+            raise CompileFailedException(f"Failed to compile configuration for '{deployment_config.name}': {e}") from e
 
     def upload_configuration(self, deployment_config: EspHomeDeploymentConfiguration):
         """
