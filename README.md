@@ -9,7 +9,7 @@
 
 <a href="./screenshots/cli_example.png" target="_blank"><img src="./screenshots/cli_example.png" /></a>
 
-[![asciicast](https://asciinema.org/a/816877.svg)](https://asciinema.org/a/816877)
+<a href="https://asciinema.org/a/816877" target="_blank"><img src="https://asciinema.org/a/816877.svg" /></a>
 
 </div>
 
