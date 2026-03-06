@@ -68,8 +68,9 @@ esp32:
 
 See: https://esphome.io/components/esp32/
 
-Note: The `esp8266` does **not** support or require any special options for reproducible builds at this time.
-Only the general `esphome` section as shown above is needed.
+> [!NOTE]
+> The `esp8266` does **not** support or require any special options for reproducible builds at this time.
+> Only the general `esphome` section as shown above is needed.
 
 ## Setup
 
