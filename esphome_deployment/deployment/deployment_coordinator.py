@@ -59,7 +59,8 @@ class DeploymentCoordinator:
 
     def _wrapped_worker(self, progress: ParallelProgress, task_id: TaskID, worker_fn, name: str, path: Path, *args, **kwargs):
         # create a manager per thread
-        deployment_manager = DeploymentManager(persistence=self._persistence)
+        logger_adapter = logging.LoggerAdapter(self.LOGGER, {"device": name})
+        deployment_manager = DeploymentManager(persistence=self._persistence, logger=logger_adapter)
         try:
             progress.set_running(task_id)
             worker_fn(deployment_manager, name, path, *args, **kwargs)
@@ -87,8 +88,10 @@ class DeploymentCoordinator:
         if isinstance(name, str):
             name = [name]
 
+        # TODO: also utilize DeploymentCoordinator
+
         for single_name in name:
-            deployment_manager = DeploymentManager(persistence=self._persistence)
+            deployment_manager = DeploymentManager(persistence=self._persistence, logger=self.LOGGER)
             deployment_manager.clean(name=single_name, path=path)
 
     def compile(

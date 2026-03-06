@@ -16,15 +16,17 @@ class UploadFailedException(Exception):
     pass
 
 class DeploymentManager:
-    LOGGER = logging.getLogger(__name__)
+    DEFAULT_LOGGER = logging.getLogger(__name__)
 
     BLACKLISTED_FILES = {
         "esphome_deployment.yaml",
         "secrets.yaml",
     }
 
-    def __init__(self, persistence=None):
+    def __init__(self, persistence, logger: Optional[logging.Logger | logging.LoggerAdapter]):
         self._persistence = persistence
+
+        self.LOGGER = logger or self.DEFAULT_LOGGER
 
     def clean(self, name: str, path: Path):
         """
