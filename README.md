@@ -1,6 +1,15 @@
-# esphome-deployment
+<h1 align="center">esphome-deployment</h1>
+<h4 align="center">A CLI Tool for managing compilation and deployment of ESPHome Device configurations.</h4>
 
-A CLI Tool for managing compilation and deployment of ESPHome Device configurations.
+<div align="center">
+
+[![Programming Language](https://img.shields.io/badge/Python-FFFFFF?logo=python)]()
+[![Latest Release](https://img.shields.io/github/release/markusressel/esphome-deployment.svg)](https://github.com/markusressel/esphome-deployment/releases)
+[![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)](/LICENSE)
+
+<a href="./screenshots/cli_example.png" target="_blank"><img src="./screenshots/cli_example.png" /></a>
+
+</div>
 
 ## Features
 
