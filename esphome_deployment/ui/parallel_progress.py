@@ -139,9 +139,11 @@ class ParallelProgress:
         with self._lock:
             state = result.__str__()
             completed = 100 if result.is_success() else 0
+
             color = "green" if result.is_success() else "red"
             if result is WorkerResults.Disabled:
                 color = "dim"
+
             self._update_status(
                 task_id=task_id,
                 state=state,
