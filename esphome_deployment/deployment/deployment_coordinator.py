@@ -9,7 +9,7 @@ from rich.progress import TaskID
 from esphome_deployment.deployment import CompileOptions, UploadOptions
 from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException
 from esphome_deployment.persistence import DeploymentPersistence
-from esphome_deployment.ui.progress import ParallelProgress, WorkerResults, WorkerResultCustom
+from esphome_deployment.ui.parallel_progress import ParallelProgress, WorkerResults, WorkerResultCustom
 
 
 class DeploymentCoordinator:
