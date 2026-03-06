@@ -2,6 +2,8 @@ import logging
 
 from rich.logging import RichHandler
 
+from esphome_deployment.ui.util import get_device_color
+
 
 class ProgressAwareLoggingHandler(RichHandler):
     """
@@ -9,22 +11,21 @@ class ProgressAwareLoggingHandler(RichHandler):
     to ensure logs don't break the Live progress display.
     """
 
+    # A simple list of vibrant colors supported by Rich
+    COLORS = ["cyan", "magenta", "green", "yellow", "blue", "bright_red", "orange3"]
+
     def __init__(self, console, *args, **kwargs):
-        super().__init__(
-            console=console,
-            markup=True,
-            rich_tracebacks=True,
-            *args, **kwargs
-        )
-        # Custom format string: pulls 'device' from the LogRecord
-        # The -20 ensures the device names align in a nice column
-        self.setFormatter(logging.Formatter(
-            fmt="[bold cyan]%(device)-20s[/] %(message)s",
-            datefmt="[%X]"
-        ))
+        super().__init__(console=console, markup=True, rich_tracebacks=True, *args, **kwargs)
+        self.setFormatter(logging.Formatter(fmt="%(device_styled)s %(message)s", datefmt="[%X]"))
 
     def emit(self, record):
-        # Fallback if a log is fired outside of a worker (no 'device' extra)
         if not hasattr(record, "device"):
-            record.device = "system"
+            # Default style for non-device logs
+            record.device_styled = "[bold white]system              [/]"
+        else:
+            color = get_device_color(record.device)
+            # Pad the name to 20 characters for perfect vertical alignment
+            padded_name = f"{record.device:<20}"
+            record.device_styled = f"[bold {color}]{padded_name}[/]"
+
         super().emit(record)

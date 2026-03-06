@@ -10,6 +10,7 @@ from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn, TaskID
 
 from esphome_deployment.log_stuff import ProgressAwareLoggingHandler
+from esphome_deployment.ui.util import get_device_color
 
 
 class WorkerResult(ABC):
@@ -113,10 +114,20 @@ class ParallelProgress:
 
     def add_task(self, name: str) -> TaskID:
         with self._lock:
-            raw_id = self._progress.add_task("", name=name, state="queued", state_color="yellow", total=None)
-            task_id = TaskID(raw_id)  # ensure type for static checker
-            self._task_map[task_id] = task_id
-            return task_id
+            # Get the unique color for this specific device
+            device_color = get_device_color(name)
+
+            # We wrap the name in the color tag inside the 'name' field
+            styled_name = f"[bold {device_color}]{name}[/]"
+
+            raw_id = self._progress.add_task(
+                "",
+                name=styled_name,  # The name itself is now colored
+                state="queued",
+                state_color="dark-gray",  # State (queued/running) can stay neutral
+                total=None
+            )
+            return TaskID(raw_id)
 
     def set_running(self, task_id: TaskID):
         with self._lock:
