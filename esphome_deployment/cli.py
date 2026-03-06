@@ -15,8 +15,8 @@ from esphome_deployment.config import AppConfig
 from esphome_deployment.deployment import EspHomeDeploymentConfiguration
 from esphome_deployment.deployment.deployment_coordinator import DeploymentCoordinator, CompileOptions, UploadOptions
 from esphome_deployment.deployment.deployment_manager import DeploymentManager
-from esphome_deployment.log_stuff import ProgressAwareLoggingHandler
 from esphome_deployment.persistence import DeploymentPersistence
+from esphome_deployment.ui.progress_aware_logging_handler import ProgressAwareLoggingHandler
 from esphome_deployment.util import load_yaml_file
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
@@ -80,7 +80,6 @@ def _base_setup() -> Console:
         "logging.level.info": "white",
     })
     console = Console(theme=custom_theme)
-
     rich_handler = ProgressAwareLoggingHandler(console=console)
 
     root_logger = logging.getLogger()
