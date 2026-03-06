@@ -156,14 +156,14 @@ Recommended layout for a repository using `esphome-deployment` to deploy multipl
 
 ```
 <repo-root>/
-├── packages/                # reusable package files (recommended)
+├── packages/                 # reusable package files (recommended)
 │   ├── esphome.yaml
 │   └── chip/...
-├── .deployment-state/       # (generated) per-deployment JSON state files
-├── .deployment-logs/        # (generated) CLI logs for compile/upload runs
+├── .deployment-state/        # (generated) per-deployment JSON state files, commit this to VCS to share state across machines
+├── .deployment-logs/         # (generated) CLI logs for compile/upload runs
 ├── .esphome_deployment.yaml  # global config for esphome-deployment
 ├── secrets.yaml
-├── your-device-1.yaml       # individual deployment yamls (put in repo root)
+├── your-device-1.yaml        # individual deployment yamls (put in repo root)
 └── your-device-2.yaml
 ```
 
