@@ -8,11 +8,14 @@ from typing import Optional, List
 
 import click
 from container_app_conf.formatter.toml import TomlFormatter
+from rich.console import Console
+from rich.theme import Theme
 
 from esphome_deployment.config import AppConfig
 from esphome_deployment.deployment import EspHomeDeploymentConfiguration
 from esphome_deployment.deployment.deployment_coordinator import DeploymentCoordinator, CompileOptions, UploadOptions
 from esphome_deployment.deployment.deployment_manager import DeploymentManager
+from esphome_deployment.log_stuff import ProgressAwareLoggingHandler
 from esphome_deployment.persistence import DeploymentPersistence
 from esphome_deployment.util import load_yaml_file
 
@@ -64,19 +67,32 @@ def get_option_names(parameter: str) -> list:
     return CMD_OPTION_NAMES[parameter]
 
 
-def _base_setup():
+def _base_setup() -> Console:
     signal.signal(signal.SIGINT, signal_handler)
 
     config = AppConfig()
 
-    log_level = logging._nameToLevel.get(
-        str(config.LOG_LEVEL.value).upper(),
-        config.LOG_LEVEL.default
-    )
+    log_level_str = str(config.LOG_LEVEL.value).strip().upper()
+    log_level = getattr(logging, log_level_str, config.LOG_LEVEL.default)
+
+    custom_theme = Theme({
+        "logging.level.debug": "dim",
+        "logging.level.info": "white",
+    })
+    console = Console(theme=custom_theme)
+
+    rich_handler = ProgressAwareLoggingHandler(console=console)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers = []  # remove all handlers from root logger
+    root_logger.addHandler(rich_handler)
+    root_logger.setLevel(log_level)
+
     LOGGER = logging.getLogger("esphome-deployment")
     LOGGER.setLevel(log_level)
 
     LOGGER.info("=== esphome-deployment ===")
+    return console
 
 
 @cli.command(name="compile")
@@ -96,11 +112,11 @@ def c_compile(
     """
     names = _detect_device_configuration_names(name, tag)
 
-    _base_setup()
+    console = _base_setup()
     path = Path(os.getcwd())
 
     persistence = DeploymentPersistence(base_path=path)
-    deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+    deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
     compile_options = CompileOptions(allow_downgrade=allow_downgrade)
 
@@ -127,11 +143,11 @@ def c_upload(
     """
     names = _detect_device_configuration_names(name, tag)
 
-    _base_setup()
+    console = _base_setup()
     path = Path(os.getcwd())
 
     persistence = DeploymentPersistence(base_path=path)
-    deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+    deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
     upload_options = UploadOptions(
         force=force,
@@ -170,11 +186,11 @@ def c_deploy(
     """
     names = _detect_device_configuration_names(name, tag)
 
-    _base_setup()
+    console = _base_setup()
     path = Path(os.getcwd())
 
     persistence = DeploymentPersistence(base_path=path)
-    deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+    deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
     compile_options = CompileOptions(allow_downgrade=allow_downgrade)
     upload_options = UploadOptions(
@@ -199,11 +215,11 @@ def c_clean(
     """
     names = _detect_device_configuration_names(name, tag)
 
-    _base_setup()
+    console = _base_setup()
     path = Path(os.getcwd())
 
     persistence = DeploymentPersistence(base_path=path)
-    deployment_coordinator = DeploymentCoordinator(persistence=persistence)
+    deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
     deployment_coordinator.clean(name=names, path=path)
 

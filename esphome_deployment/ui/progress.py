@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import threading
 from abc import ABC
 from typing import Dict, Optional
@@ -9,7 +8,6 @@ from rich.console import Console
 from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn, TaskID
 
-from esphome_deployment.log_stuff import ProgressAwareLoggingHandler
 from esphome_deployment.ui.util import get_device_color
 
 
@@ -64,8 +62,8 @@ class ParallelProgress:
     This class uses an indeterminate spinner for each task since esphome's subprocesses do their own output.
     """
 
-    def __init__(self, console: Optional[Console] = None):
-        self.console = console or Console()
+    def __init__(self, console: Console):
+        self.console = console
         self._progress = Progress(
             SpinnerColumn(),
             TextColumn("{task.fields[name]}", justify="left"),
@@ -80,17 +78,7 @@ class ParallelProgress:
         self._lock = threading.Lock()
         self._live: Optional[Live] = None
 
-        self._handler = ProgressAwareLoggingHandler(console=self.console)
-
     def __enter__(self):
-        # 1. Capture original handlers and replace with our Rich handler
-        root_logger = logging.getLogger()
-        self._original_handlers = root_logger.handlers[:]
-        for h in self._original_handlers:
-            root_logger.removeHandler(h)
-        root_logger.addHandler(self._handler)
-
-        # 2. start live rendering
         self._live = Live(
             self._progress,
             console=self.console,
@@ -105,12 +93,6 @@ class ParallelProgress:
         if self._live:
             self._live.__exit__(exc_type, exc, tb)
             self._live = None
-
-        # Restore original logging handlers
-        root_logger = logging.getLogger()
-        root_logger.removeHandler(self._handler)
-        for h in self._original_handlers:
-            root_logger.addHandler(h)
 
     def add_task(self, name: str) -> TaskID:
         with self._lock:

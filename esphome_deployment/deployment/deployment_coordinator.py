@@ -3,10 +3,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import List, cast
 
+from rich.console import Console
 from rich.progress import TaskID
 
 from esphome_deployment.deployment import CompileOptions, UploadOptions
 from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException
+from esphome_deployment.persistence import DeploymentPersistence
 from esphome_deployment.ui.progress import ParallelProgress, WorkerResults, WorkerResultCustom
 
 
@@ -16,7 +18,8 @@ class DeploymentCoordinator:
     """
     LOGGER = logging.getLogger(__name__)
 
-    def __init__(self, persistence=None):
+    def __init__(self, console: Console, persistence: DeploymentPersistence):
+        self._console = console
         self._persistence = persistence
 
     def _run_in_parallel(
@@ -34,7 +37,7 @@ class DeploymentCoordinator:
 
         Note: Also does this if there is only one name, to ensure consistent output and progress display.
         """
-        with ParallelProgress() as progress:
+        with ParallelProgress(console=self._console) as progress:
             with ThreadPoolExecutor(max_workers=min(max_workers, len(names))) as executor:
                 future_to_name = {}
                 for name in names:
