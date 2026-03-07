@@ -15,17 +15,18 @@
 
 ## Features
 
-- [x] Batch-Deploy ESPHome configurations
-- [x] Build caching with reproducible builds
-- [x] Only upload changed binaries
-- [x] Deployment State Tracking via VCS (Git)
+* 🚀 **Batch Deployment:** Deploy to multiple devices with a single command.
+* 📦 **Smart Caching:** Avoids redundant compiles by tracking configuration hashes.
+* 🕵️ **Change Detection:** Only uploads binaries if the resulting build actually changed.
+* 🔄 **VCS State Tracking:** Store deployment metadata in Git to sync state across CI/CD or multiple machines.
+* 📋 **Detailed Logging:** Automatic per-device log capture for easy debugging.
 
-## Prerequisites
+## Setup
 
-### ESPHome CLI
+### Prerequisites
 
-This tool requires the ESPHome CLI to be installed and available within your system's PATH.
-See: https://esphome.io/guides/installing_esphome.html
+1. [**ESPHome CLI**](https://esphome.io/guides/installing_esphome.html) must be installed in your `PATH`.
+2. A Git repository for your ESPHome device configurations.
 
 ### Reproducible Builds
 
@@ -72,16 +73,13 @@ See: https://esphome.io/components/esp32/
 > The `esp8266` does **not** support or require any special options for reproducible builds at this time.
 > Only the general `esphome` section as shown above is needed.
 
-## Setup
+### Installation
 
-1. Create a git repository to track your ESPHome configurations (if you don't have one already)
-2. Clone this repository as a git submodule next to your ESPHome configurations
+1. Clone this repository as a git submodule next to your ESPHome configurations
     * e.g. `git submodule add https://github.com/markusressel/esphome-deployment`
-3. Ensure your configurations utilize the reproducible build options as shown above
+2. Ensure your configurations utilize the reproducible build options as shown above
     * e.g. via packages for both ESPHome and ESP32 devices containing the options above
-4. Use `poetry` (or any other method of your choice) to run esphome-deployment (see below)
-
-### Install Dependencies
+3. Use `poetry` (or any other method of your choice) to run esphome-deployment (see below)
 
 ```bash
 python3 -m venv venv
