@@ -182,3 +182,13 @@ tail -f .deployment-logs/<filename>.log
 
 > [!WARNING]
 > **Privacy note:** Logs may contain IPs, device identifiers or other runtime information. Treat them as potentially sensitive when sharing.
+
+# Contributing
+
+Contributions to esphome-deployment are very welcome! If you have an idea for a new feature, found a bug or want to help out with documentation, please open an issue or submit a
+pull request.
+
+# License
+
+esphome-deployment is licensed under the [AGPLv3 License](LICENSE). By using or contributing to this project, you agree to comply with the terms of this license. Please review the
+LICENSE file for more details.
