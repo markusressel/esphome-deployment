@@ -481,12 +481,10 @@ class DeploymentManager:
                     raise AssertionError("Compiled binary mismatch. Use the '--ignore-compiled-binary-mismatch' flag to ignore this check.")
 
             if upload_info.binary_hash == current_binary_hash:
-                self.LOGGER.warning(
-                    f"Local firmware binary already uploaded")
                 if not upload_options.force:
-                    self.LOGGER.info(f"Skipping upload")
+                    self.LOGGER.warning(f"Local firmware binary has not changed, skipping upload")
                     return
                 else:
-                    self.LOGGER.info(f"Forcing upload as per '--force' flag.")
+                    self.LOGGER.info(f"Local firmware binary has not changed, forcing upload as per '--force' flag.")
 
         self.upload_configuration(deployment_config)
