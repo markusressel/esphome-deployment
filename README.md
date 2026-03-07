@@ -91,40 +91,19 @@ poetry install -P ./esphome-deployment
 
 ## Usage
 
-### Compile ESPHome Firmwares
-
-```bash
-poetry run -P ./esphome-deployment esphome-deployment compile
 ```
+Usage: esphome-deployment [OPTIONS] COMMAND [ARGS]...
 
-Single Configuration:
+Options:
+  --version   Show the version and exit.
+  -h, --help  Show this message and exit.
 
-```bash
-poetry run -P ./esphome-deployment esphome-deployment compile -n "your_epshome_config.yaml"
-```
-
-### Upload compiled Firmware Images
-
-```bash
-poetry run -P ./esphome-deployment esphome-deployment upload
-```
-
-Filter by single Configuration:
-
-```bash
-poetry run -P ./esphome-deployment esphome-deployment upload -n "your_epshome_config.yaml"
-```
-
-### Compile + Upload (Deploy)
-
-```bash
-poetry run -P ./esphome-deployment esphome-deployment deploy
-```
-
-Single Configuration:
-
-```bash
-poetry run -P ./esphome-deployment esphome-deployment deploy -n "your_epshome_config.yaml"
+Commands:
+  clean    Clean
+  compile  Compile the given deployment(s)
+  config   Print the current configuration
+  deploy   Deploy (compile + upload) the given deployment(s)
+  upload   Upload the given deployment(s)
 ```
 
 ## Configuration
