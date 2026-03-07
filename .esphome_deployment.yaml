@@ -1,2 +1,13 @@
 esphome_deployment:
-  log_level: "ERROR"
+  # (optional) The log level to use for deployment tasks. Defaults to INFO.
+  log_level: INFO
+
+  # Configuration for the deployment coordinator, which manages the deployment tasks.
+  deployment_coordinator:
+    # (optional) The maximum number of workers to use for deployment tasks.
+    # Defaults to 4.
+    max_workers: 4
+
+    # (optional) The number of log files to keep for each deployment task.
+    # Defaults to 3.
+    log_files_to_keep: 3

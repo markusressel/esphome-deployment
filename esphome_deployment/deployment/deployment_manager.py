@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
+from esphome_deployment.config import AppConfig
 from esphome_deployment.deployment import EspHomeDeploymentConfiguration, CompileInfo, UploadInfo, CompileOptions, UploadOptions
 from esphome_deployment.util import calculate_md5_file, calculate_md5_yaml_recursive, load_yaml_file
 from esphome_deployment.util.semver import SemVerVersion
@@ -12,12 +13,14 @@ from esphome_deployment.util.semver import SemVerVersion
 class CompileFailedException(Exception):
     pass
 
+
 class UploadFailedException(Exception):
     pass
 
 
 class DeploymentDisabledException(Exception):
     pass
+
 
 class DeploymentManager:
     DEFAULT_LOGGER = logging.getLogger(__name__)
@@ -323,19 +326,39 @@ class DeploymentManager:
         :param args: the arguments to pass to esphome
         """
         # Create the logs directory if it doesn't exist
-        log_dir = deployment_config.file_path.parent / ".deployment-logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create a unique filename: e.g., livingroom_compile_20231027_123005.log
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        command_name = args[0] if args else "unknown"
-        log_file = log_dir / f"{deployment_config.name}_{command_name}_{timestamp}.log"
+        log_file = self._create_esphome_command_log_file(deployment_config, args)
 
         self.LOGGER.info(f"Running 'esphome {args[0]}' >> {log_file}")
         self.LOGGER.debug(f"Executing esphome with arguments: {args} >> {log_file}")
 
         self._run_esphome_subprocess(log_file, *args)
         # self._run_esphome_module(*args)
+
+    def _create_esphome_command_log_file(self, deployment_config: EspHomeDeploymentConfiguration, args):
+        log_dir = deployment_config.file_path.parent / ".deployment-logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        command_name = args[0] if args and isinstance(args[0], str) else "unknown"
+
+        # 1. Logic to prune old logs (Limited to AppConfig.LOG_FILES_TO_KEEP total)
+        existing_logs = sorted(
+            log_dir.glob(f"{deployment_config.name}_{command_name}_*.log"),
+            key=lambda x: x.stat().st_mtime
+        )
+
+        while len(existing_logs) >= AppConfig.LOG_FILES_TO_KEEP.value:
+            oldest_log = existing_logs.pop(0)
+            try:
+                oldest_log.unlink()
+            except OSError:
+                pass
+
+        # 2. Create a clean filename
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Result: Uhr_compile_20260307_053844.log
+        log_file = log_dir / f"{deployment_config.name}_{command_name}_{timestamp}.log"
+
+        return log_file
 
     def _run_esphome_subprocess(self, log_file: Path, *args):
         with open(log_file, "w", encoding="utf-8") as f:

@@ -42,3 +42,13 @@ class AppConfig(ConfigBase):
         ],
         default=4,
     )
+
+    LOG_FILES_TO_KEEP = IntConfigEntry(
+        description="Number of log files to keep for each deployment",
+        key_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_DEPLOYMENT_COORDINATOR,
+            "log_files_to_keep"
+        ],
+        default=3,
+    )
