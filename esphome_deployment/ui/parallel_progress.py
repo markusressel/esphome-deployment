@@ -6,8 +6,9 @@ from typing import Dict, Optional
 
 from rich.console import Console
 from rich.live import Live
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn, TaskID
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, TaskID
 
+from esphome_deployment.ui.dynamic_bar_column import DynamicBarColumn
 from esphome_deployment.ui.util import get_device_color
 
 
@@ -69,9 +70,10 @@ class ParallelProgress:
             SpinnerColumn(),
             TextColumn("{task.fields[name]}", justify="left"),
             TextColumn("[{task.fields[state_color]}]{task.fields[state]}[/]", justify="right"),
-            BarColumn(bar_width=None),
+            DynamicBarColumn(
+                bar_width=None,
+            ),
             TimeElapsedColumn(),
-            TimeRemainingColumn(),
             console=self.console,
             transient=False,
         )
@@ -108,7 +110,7 @@ class ParallelProgress:
                 name=styled_name,  # The name itself is now colored
                 state="queued",
                 state_color="dark-gray",  # State (queued/running) can stay neutral
-                total=None
+                total=None,  # Indeterminate spinner, so total is None
             )
             return TaskID(raw_id)
 
@@ -126,34 +128,61 @@ class ParallelProgress:
         with self._lock:
             self._progress.update(TaskID(task_id), state=state, state_color=color, completed=progress)
 
-    def _update_status(self, task_id: TaskID, state: str, color: str, progress: Optional[float] = None):
+    def _update_status(
+        self,
+        task_id: TaskID,
+        state: str = None,
+        color: str = None,
+        bar_completed_style: str = None,
+        bar_finished_style: str = None,
+        progress: Optional[float] = None,
+        total: Optional[float] = None,
+        description: str = None,
+        visible: bool = True
+    ):
         """
         :param task_id: the id of the task to update (as returned by add_task)
         :param state: arbitrary text to display as the current state of this task
         :param color: the color to use for the state text (e.g. "green", "red", "yellow", "cyan", etc.)
         :param progress: 0 - 100
         """
-        self._progress.update(TaskID(task_id), state=state, state_color=color, completed=progress, total=100)
+        self._progress.update(
+            task_id=TaskID(task_id),
+            state=state,
+            description=description,
+            state_color=color,
+            bar_completed_style=bar_completed_style,
+            bar_finished_style=bar_finished_style,
+            completed=progress,
+            total=total,
+            visible=visible,
+        )
 
     def mark_done(self, task_id: TaskID, result: WorkerResult = WorkerResults.SUCCESS):
         with self._lock:
             state = result.__str__()
-            completed = 100 if result.is_success() else 0
-
-            color = "green" if result.is_success() else "red"
-            if result is WorkerResults.Disabled:
-                color = "dim"
+            total = 100
+            if result.is_success():
+                color = "green"
+                completed = 100
+            elif result is WorkerResults.Disabled:
+                color = "grey37"  # Specific hex or rich color for 'Disabled'
+                completed = 100  # Fill it 100% to show a solid grey bar for disabled tasks
+            else:
+                # FAILURE case
+                color = "red"
+                completed = 100  # Fill it 100% so we see a SOLID red bar
 
             self._update_status(
                 task_id=task_id,
                 state=state,
                 color=color,
-                progress=completed
+                bar_completed_style=color,
+                bar_finished_style=color,
+                total=total,
+                progress=completed,
             )
-            try:
-                self._progress.stop_task(TaskID(task_id))
-            except Exception:
-                pass
+            self._progress.stop_task(TaskID(task_id))
 
     def stop(self):
         if self._live:
