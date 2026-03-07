@@ -172,7 +172,7 @@ class DeploymentManager:
         result = []
         for config in deployment_configurations:
             if not config.deploy:
-                self.LOGGER.warning(f"Skipping deployment as per 'deploy' flag")
+                self.LOGGER.warning(f"Skipping disabled deployment")
                 raise DeploymentDisabledException(f"Deployment disabled for '{config.filename}' as per 'deploy' flag")
 
             result.append(config)
