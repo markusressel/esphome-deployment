@@ -6,6 +6,7 @@ from typing import List, Optional, Callable
 from rich.console import Console
 from rich.progress import TaskID
 
+from esphome_deployment.config import AppConfig
 from esphome_deployment.deployment import CompileOptions, UploadOptions
 from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException, DeploymentDisabledException
 from esphome_deployment.persistence import DeploymentPersistence
@@ -30,7 +31,7 @@ class DeploymentCoordinator:
         worker_fn: WorkerFunc,
         path: Path,
         *args,
-        max_workers: int = 4,
+        max_workers: int = None,
         **kwargs
     ):
         """
@@ -39,6 +40,9 @@ class DeploymentCoordinator:
 
         Note: Also does this if there is only one name, to ensure consistent output and progress display.
         """
+        if max_workers is None:
+            max_workers = AppConfig.MAX_WORKERS.value
+
         with ParallelProgress(console=self._console) as progress:
             with ThreadPoolExecutor(max_workers=min(max_workers, len(names))) as executor:
                 future_to_name = {}
@@ -116,7 +120,7 @@ class DeploymentCoordinator:
             )
             return WorkerResultCustom(state="Cleaned", is_success=True)
 
-        self._run_in_parallel(name, _worker, path)
+        self._run_in_parallel(name=name, worker_fn=_worker, path=path)
 
     def compile(
         self,
