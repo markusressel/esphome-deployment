@@ -120,7 +120,7 @@ class DeploymentCoordinator:
             )
             return WorkerResultCustom(state="Cleaned", is_success=True)
 
-        self._run_in_parallel(name=name, worker_fn=_worker, path=path)
+        self._run_in_parallel(names=name, worker_fn=_worker, path=path)
 
     def compile(
         self,
