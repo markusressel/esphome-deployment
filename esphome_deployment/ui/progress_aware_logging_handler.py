@@ -14,9 +14,6 @@ class ProgressAwareLoggingHandler(RichHandler):
     to ensure logs don't break the Live progress display.
     """
 
-    # A simple list of vibrant colors supported by Rich
-    COLORS = ["cyan", "magenta", "green", "yellow", "blue", "bright_red", "orange3"]
-
     def __init__(self, console: Console, *args, **kwargs):
         def format_time_ms(dt: datetime) -> Text:
             # Format to H:M:S.mmm
