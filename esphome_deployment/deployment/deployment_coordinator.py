@@ -8,7 +8,7 @@ from rich.progress import TaskID
 
 from esphome_deployment.config import AppConfig
 from esphome_deployment.deployment import CompileOptions, UploadOptions
-from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException, DeploymentDisabledException
+from esphome_deployment.deployment.deployment_manager import DeploymentManager, UploadFailedException, CompileFailedException, DeploymentDisabledException, FirmwareBinaryNotFound
 from esphome_deployment.persistence import DeploymentPersistence
 from esphome_deployment.ui.parallel_progress import ParallelProgress, WorkerResults, WorkerResultCustom, WorkerResult
 
@@ -91,6 +91,8 @@ class DeploymentCoordinator:
                 should_raise = False
             elif isinstance(ex, UploadFailedException):
                 worker_result = WorkerResultCustom(state="Upload Failed", is_success=False)
+            elif isinstance(ex, FirmwareBinaryNotFound):
+                worker_result = WorkerResultCustom(state="Needs Compile", is_success=False)
             elif isinstance(ex, CompileFailedException):
                 worker_result = WorkerResultCustom(state="Compile Failed", is_success=False)
             else:

@@ -22,6 +22,9 @@ class DeploymentDisabledException(Exception):
     pass
 
 
+class FirmwareBinaryNotFound(FileNotFoundError):
+    pass
+
 class DeploymentManager:
     DEFAULT_LOGGER = logging.getLogger(__name__)
 
@@ -468,7 +471,7 @@ class DeploymentManager:
         :param upload_options: options for upload
         """
         if not deployment_config.binary_file_path.exists():
-            raise FileNotFoundError(f"Firmware binary not found: {deployment_config.binary_file_path}, please compile first.")
+            raise FirmwareBinaryNotFound(f"Firmware binary not found: {deployment_config.binary_file_path}, please compile first.")
         compile_info: Optional[CompileInfo] = self._get_remembered_compile_info(deployment_config)
         upload_info: Optional[UploadInfo] = self._get_remembered_upload_info(deployment_config)
         if upload_info is not None:
