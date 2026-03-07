@@ -147,9 +147,9 @@ Recommended layout for a repository using `esphome-deployment` to deploy multipl
 └── your-device-2.yaml
 ```
 
-[!TIP]
-**Commit your state!** By committing the `.deployment-state/*.json` files, esphome-deployment will know exactly which devices are already up-to-date even when
-running it on a different machine.
+> [!TIP]
+> **Commit your state!** By committing the `.deployment-state/*.json` files, esphome-deployment will know exactly which devices are already up-to-date even when
+> running it on a different machine.
 
 Add this to your `.gitignore`:
 
@@ -180,8 +180,8 @@ less .deployment-logs/<filename>.log
 tail -f .deployment-logs/<filename>.log
 ```
 
-[!WARNING]
-**Privacy note:** Logs may contain IPs, device identifiers or other runtime information. Treat them as potentially sensitive when sharing.
+> [!WARNING]
+> **Privacy note:** Logs may contain IPs, device identifiers or other runtime information. Treat them as potentially sensitive when sharing.
 
 ## Example run
 
