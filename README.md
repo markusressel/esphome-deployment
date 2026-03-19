@@ -83,6 +83,7 @@ into it, and run the CLI commands as shown in the usage section below.
 ```bash
 docker run --rm -it \
   -v ./:/config \
+  -v ~/.platformio:/root/.platformio \ 
   ghcr.io/markusressel/esphome-deployment:latest \
   esphome-deployment --help
 ```
