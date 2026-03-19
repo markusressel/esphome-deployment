@@ -82,8 +82,9 @@ into it, and run the CLI commands as shown in the usage section below.
 
 ```bash
 docker run --rm -it \
-  -v ./:/config \
-  -v ~/.platformio:/root/.platformio \ 
+  -v ~/esphome-configs:/config \
+  -u $(id -u):$(id -g) \
+  -e ESPHOME_DEPLOYMENT_DEPLOYMENT_COORDINATOR_MAX_WORKERS=1 \ 
   ghcr.io/markusressel/esphome-deployment:latest \
   esphome-deployment --help
 ```
