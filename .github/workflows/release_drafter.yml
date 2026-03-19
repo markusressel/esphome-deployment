@@ -5,6 +5,10 @@ on:
     # branches to consider in the event; optional, defaults to all
     branches:
       - main
+      - master
+
+permissions:
+  contents: write
 
 jobs:
   update_release_draft:
