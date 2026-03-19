@@ -25,7 +25,7 @@ dependencies = [
 esphome-deployment = "esphome_deployment.cli:cli"
 
 [project.optional-dependencies]
-dev = [
+test = [
     "pytest>=7.0"
 ]
 
