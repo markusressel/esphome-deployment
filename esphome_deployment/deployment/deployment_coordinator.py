@@ -40,6 +40,9 @@ class DeploymentCoordinator:
 
         Note: Also does this if there is only one name, to ensure consistent output and progress display.
         """
+        if len(names) == 0:
+            self.LOGGER.warning("No deployments to run.")
+            return
         if max_workers is None:
             max_workers = AppConfig.MAX_WORKERS.value
 
