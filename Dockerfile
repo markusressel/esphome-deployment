@@ -23,8 +23,6 @@ RUN apt-get update \
  && POETRY_VIRTUALENVS_CREATE=false ${VENV_HOME}/bin/poetry install --no-interaction --no-cache --only main \
  && ${VENV_HOME}/bin/pip uninstall -y poetry
 
-# since we have installed the package, we can now remove all of the source files, which are not needed anymore
-RUN rm -rf /app/*
 WORKDIR /config
 
-ENTRYPOINT [ "esphome-deployment" ]
+CMD [ "esphome-deployment" ]
