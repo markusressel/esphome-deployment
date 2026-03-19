@@ -201,7 +201,7 @@ def c_deploy(
 
 
 @cli.command(name="clean")
-@click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str,
+@click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), required=False, default=None, type=str, multiple=True,
               help='The name of the deployment to clean (filename without extension)')
 @click.option(*get_option_names(PARAM_TAG), required=False, default=None, type=str, multiple=True,
               help='The tag of the deployment(s) to clean')
