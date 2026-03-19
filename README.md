@@ -39,6 +39,7 @@ there are a couple of options we can add to our configuration YAML to remedy thi
 #### `esphome:` Section
 
 > `packages/esphome.yaml`
+
 ```yaml
 esphome:
   platformio_options:
@@ -55,6 +56,7 @@ See: https://esphome.io/components/esphome/
 #### `esp32:` Section
 
 > `packages/chip/esp32-esp-idf.yaml`
+
 ```yaml
 esp32:
   framework:
@@ -73,18 +75,16 @@ See: https://esphome.io/components/esp32/
 > The `esp8266` does **not** support or require any special options for reproducible builds at this time.
 > Only the general `esphome` section as shown above is needed.
 
-### Installation
+### Docker
 
-1. Clone this repository as a git submodule next to your ESPHome configurations
-    * e.g. `git submodule add https://github.com/markusressel/esphome-deployment`
-2. Ensure your configurations utilize the reproducible build options as shown above
-    * e.g. via packages for both ESPHome and ESP32 devices containing the options above
-3. Use `poetry` (or any other method of your choice) to run esphome-deployment (see below)
+If you prefer to use Docker, you can use the published image `ghcr.io/markusressel/esphome-deployment` from ghcr. Just ensure you mount your ESPHome configurations path
+into it, and run the CLI commands as shown in the usage section below.
 
 ```bash
-python3 -m venv venv
-. venv/bin/activate && pip install --upgrade pip poetry
-poetry install -P ./esphome-deployment
+docker run --rm -it \
+  -v ./:/config \
+  ghcr.io/markusressel/esphome-deployment:latest \
+  esphome-deployment --help
 ```
 
 ## Usage
@@ -161,6 +161,7 @@ Add this to your `.gitignore`:
 ### Deployment State
 
 esphome-deployment remembers the compilation and upload state for each deployment configuration in a JSON file within `.deployment-state/`.
+
 - What they are: For every esphome invocation the CLI writes a log into `.deployment-logs/` in the same directory as your device YAMLs. Filenames are like
   `<deployment>_<command>_YYYYMMDD_HHMMSS.log` and contain merged stdout/stderr from the esphome CLI. These logs are invaluable for debugging compile/upload issues.
 
@@ -187,6 +188,24 @@ tail -f .deployment-logs/<filename>.log
 
 Contributions to esphome-deployment are very welcome! If you have an idea for a new feature, found a bug or want to help out with documentation, please open an issue or submit a
 pull request.
+
+## Local Development
+
+```bash
+
+### Installation
+
+1. Clone this repository as a git submodule next to your ESPHome configurations
+    * e.g. `git submodule add https://github.com/markusressel/esphome-deployment`
+2. Ensure your configurations utilize the reproducible build options as shown above
+    * e.g. via packages for both ESPHome and ESP32 devices containing the options above
+3. Use `poetry` (or any other method of your choice) to run esphome-deployment (see below)
+
+```bash
+python3 -m venv venv
+. venv/bin/activate && pip install --upgrade pip poetry
+poetry install -P ./esphome-deployment
+```
 
 # License
 
