@@ -7,6 +7,7 @@ from container_app_conf.entry.string import StringConfigEntry
 from container_app_conf.source.env_source import EnvSource
 from container_app_conf.source.toml_source import TomlSource
 from container_app_conf.source.yaml_source import YamlSource
+from py_range_parse import parse_range
 
 from esphome_deployment.const import *
 
@@ -40,6 +41,7 @@ class AppConfig(ConfigBase):
             CONFIG_NODE_DEPLOYMENT_COORDINATOR,
             "max_workers"
         ],
+        range=parse_range("[1..100]"),
         default=4,
     )
 

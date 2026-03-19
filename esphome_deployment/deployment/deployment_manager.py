@@ -25,6 +25,7 @@ class DeploymentDisabledException(Exception):
 class FirmwareBinaryNotFound(FileNotFoundError):
     pass
 
+
 class DeploymentManager:
     DEFAULT_LOGGER = logging.getLogger(__name__)
 
@@ -334,7 +335,12 @@ class DeploymentManager:
         self.LOGGER.info(f"Running 'esphome {args[0]}' >> {log_file}")
         self.LOGGER.debug(f"Executing esphome with arguments: {args} >> {log_file}")
 
-        self._run_esphome_subprocess(log_file, *args)
+        logger = None
+        log_to_console = AppConfig.MAX_WORKERS.value == 1
+        if log_to_console:
+            logger = self.LOGGER
+
+        self._run_esphome_subprocess(log_file=log_file, logger=logger, *args)
         # self._run_esphome_module(*args)
 
     def _create_esphome_command_log_file(self, deployment_config: EspHomeDeploymentConfiguration, args):
@@ -363,17 +369,28 @@ class DeploymentManager:
 
         return log_file
 
-    def _run_esphome_subprocess(self, log_file: Path, *args):
+    def _run_esphome_subprocess(self, *args, log_file: Path, logger: Optional[logging.Logger]):
         with open(log_file, "w", encoding="utf-8") as f:
-            # We use stdout=f and stderr=subprocess.STDOUT to merge both
-            # streams into the same log file.
-            subprocess.run(
+            process = subprocess.Popen(
                 ['esphome', *args],
-                stdout=f,
-                stderr=subprocess.STDOUT,
-                check=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # Merge stderr in stdout
+                text=True,
+                bufsize=1  # Line-buffered for realtime streaming
             )
+
+            if process.stdout:
+                for line in process.stdout:
+                    f.write(line)
+                    f.flush()
+
+                    if logger:
+                        logger.info(line.rstrip())
+
+            return_code = process.wait()
+
+            if return_code != 0:
+                raise subprocess.CalledProcessError(return_code, process.args)
 
     def _run_esphome_module(self, *args):
         """
