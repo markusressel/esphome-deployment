@@ -16,6 +16,11 @@ env:
 jobs:
   buildx:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write # Required to push to GHCR
+
     #strategy:
     #  fail-fast: false
     #  max-parallel: 2
