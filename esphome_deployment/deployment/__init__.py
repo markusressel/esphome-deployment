@@ -1,11 +1,11 @@
 import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set, Tuple
 
 from ruamel.yaml.comments import TaggedScalar, CommentedMap
 
-from esphome_deployment.util import load_json_file
+from esphome_deployment.util import load_json_file, load_yaml_file
 from esphome_deployment.util.semver import SemVerVersion
 
 
@@ -122,11 +122,88 @@ class EspHomeDeploymentConfiguration:
 
     @property
     def esphome_deployment_options(self) -> EspHomeDeploymentOptions:
-        options: Dict[str, Any] = self.parsed_yaml_content.get(".esphome_deployment", {})
+        visited_files: Set[Path] = set()
+        package_options = self._collect_package_deployment_options(visited_files=visited_files)
+
+        top_level_options = self._parse_deployment_options(self.parsed_yaml_content)
+
+        # Top-level options override package-derived defaults when explicitly set.
+        return self._merge_deployment_options(package_options, top_level_options)
+
+    @staticmethod
+    def _parse_deployment_options(parsed_yaml: Dict[str, Any]) -> Tuple[Optional[bool], List[str]]:
+        raw_options = parsed_yaml.get(".esphome_deployment", {})
+        deploy: Optional[bool] = None
+        if "deploy" in raw_options:
+            deploy = bool(raw_options.get("deploy"))
+
+        raw_tags = raw_options.get("tags", [])
+        if not isinstance(raw_tags, list):
+            raw_tags = [raw_tags]
+        tags = [str(tag) for tag in raw_tags]
+
+        return deploy, tags
+
+    @staticmethod
+    def _merge_deployment_options(
+        base: Tuple[Optional[bool], List[str]],
+        override: Tuple[Optional[bool], List[str]],
+    ) -> EspHomeDeploymentOptions:
+        deploy, merged_tags = EspHomeDeploymentConfiguration._merge_deployment_option_values(base, override)
         return EspHomeDeploymentOptions(
-            deploy=options.get("deploy", True),
-            tags=options.get("tags", []),
+            deploy=deploy,
+            tags=merged_tags,
         )
+
+    @staticmethod
+    def _merge_deployment_option_values(
+        base: Tuple[Optional[bool], List[str]],
+        override: Tuple[Optional[bool], List[str]],
+    ) -> Tuple[bool, List[str]]:
+        base_deploy, base_tags = base
+        override_deploy, override_tags = override
+
+        deploy = base_deploy if override_deploy is None else override_deploy
+        if deploy is None:
+            deploy = True
+
+        # Keep tag order stable while preventing duplicates.
+        merged_tags = list(dict.fromkeys([*base_tags, *override_tags]))
+        return deploy, merged_tags
+
+    def _collect_package_deployment_options(
+        self,
+        visited_files: Set[Path],
+    ) -> Tuple[Optional[bool], List[str]]:
+        resolved_path = self.file_path.resolve()
+        if resolved_path in visited_files:
+            return None, []
+        visited_files.add(resolved_path)
+
+        merged: Tuple[Optional[bool], List[str]] = (None, [])
+        for package in self.packages:
+            if not package.file:
+                continue
+
+            package_yaml = load_yaml_file(package.file)
+            if not isinstance(package_yaml, dict):
+                continue
+
+            package_config = EspHomeDeploymentConfiguration(
+                file_path=package.file,
+                parsed_yaml_content=package_yaml,
+            )
+
+            nested_options = package_config._collect_package_deployment_options(
+                visited_files=visited_files,
+            )
+
+            merged = self._merge_deployment_option_values(merged, nested_options)
+            package_options = package_config._parse_deployment_options(package_yaml)
+            merged = self._merge_deployment_option_values(merged, package_options)
+
+        return merged
+
 
     @property
     def packages(self) -> List[EspHomePackageReference]:
@@ -144,9 +221,14 @@ class EspHomeDeploymentConfiguration:
         #       var1: value1
 
         raw_packages = self.parsed_yaml_content.get("packages", {})
+        if not isinstance(raw_packages, dict):
+            return []
+
         result = []
         for package_name, package_value in raw_packages.items():
             if isinstance(package_value, TaggedScalar):
+                if package_value.value is None:
+                    continue
                 result.append(
                     EspHomePackageReference(
                         name=package_name,
@@ -155,11 +237,19 @@ class EspHomeDeploymentConfiguration:
                     )
                 )
             elif isinstance(package_value, CommentedMap):
+                package_file = package_value.get("file")
+                if package_file is None:
+                    continue
+
+                package_vars = package_value.get("vars", {})
+                if not isinstance(package_vars, dict):
+                    package_vars = {}
+
                 result.append(
                     EspHomePackageReference(
                         name=package_name,
-                        file=self.path / package_value.get("file"),
-                        vars=package_value.get("vars", {})
+                        file=self.path / package_file,
+                        vars=package_vars
                     )
                 )
         return result
