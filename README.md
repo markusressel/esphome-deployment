@@ -75,19 +75,15 @@ See: https://esphome.io/components/esp32/
 > The `esp8266` does **not** support or require any special options for reproducible builds at this time.
 > Only the general `esphome` section as shown above is needed.
 
-### Docker
+### Installation
 
-If you prefer to use Docker, you can use the published image `ghcr.io/markusressel/esphome-deployment` from ghcr. Just ensure you mount your ESPHome configurations path
-into it, and run the CLI commands as shown in the usage section below.
+Install from PyPI:
 
 ```bash
-docker run --rm -it \
-  -v ~/esphome-configs:/config \
-  -u $(id -u):$(id -g) \
-  -e ESPHOME_DEPLOYMENT_DEPLOYMENT_COORDINATOR_MAX_WORKERS=1 \ 
-  ghcr.io/markusressel/esphome-deployment:latest \
-  esphome-deployment --help
+pip install esphome-deployment
 ```
+
+Make sure to also have esphome CLI installed and available in your `PATH` as `esphome` for esphome-deployment to work.
 
 ## Usage
 
