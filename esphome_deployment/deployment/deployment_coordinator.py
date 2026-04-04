@@ -46,13 +46,15 @@ class DeploymentCoordinator:
         if max_workers is None:
             max_workers = AppConfig.MAX_WORKERS.value
 
+        log_to_console = len(names) == 1 or max_workers == 1
+
         with ParallelProgress(console=self._console) as progress:
             with ThreadPoolExecutor(max_workers=min(max_workers, len(names))) as executor:
                 future_to_name = {}
                 for name in names:
                     raw_task_id = progress.add_task(name)
                     task_id: TaskID = raw_task_id
-                    future = executor.submit(self._wrapped_worker, progress, task_id, worker_fn, name, path, *args, **kwargs)
+                    future = executor.submit(self._wrapped_worker, progress, task_id, worker_fn, name, path, log_to_console, *args, **kwargs)
                     future_to_name[future] = name
 
                 # IMPORTANT: Do not call future.result() in a loop that blocks
@@ -84,7 +86,7 @@ class DeploymentCoordinator:
         deployment_manager = DeploymentManager(persistence=self._persistence, logger=logger_adapter)
         try:
             progress.set_running(task_id)
-            worker_result = worker_fn(deployment_manager, name, path, *args, **kwargs)
+            worker_result = worker_fn(deployment_manager, name, path, log_to_console, *args, **kwargs)
             progress.mark_done(task_id, result=worker_result or WorkerResults.SUCCESS)
         except Exception as ex:
             should_raise = True
@@ -108,7 +110,8 @@ class DeploymentCoordinator:
     def clean(
         self,
         name: str | List[str],
-        path: Path
+        path: Path,
+        log_to_console: bool,
     ):
         """
         Cleans the deployment for a specific configuration
@@ -118,7 +121,7 @@ class DeploymentCoordinator:
         if isinstance(name, str):
             name = [name]
 
-        def _worker(manager: DeploymentManager, single_name: str, path: Path) -> WorkerResult:
+        def _worker(manager: DeploymentManager, single_name: str, path: Path, log_to_console: bool) -> WorkerResult:
             manager.clean(
                 name=single_name,
                 path=path,
@@ -142,11 +145,12 @@ class DeploymentCoordinator:
         if isinstance(name, str):
             name = [name]
 
-        def _worker(manager: DeploymentManager, single_name: str, path: Path, compile_options: CompileOptions) -> WorkerResult:
+        def _worker(manager: DeploymentManager, single_name: str, path: Path, log_to_console: bool, compile_options: CompileOptions) -> WorkerResult:
             manager.compile(
                 name=single_name,
                 path=path,
-                compile_options=compile_options
+                compile_options=compile_options,
+                log_to_console=log_to_console,
             )
             return WorkerResultCustom(state="Compiled", is_success=True)
 
@@ -167,11 +171,12 @@ class DeploymentCoordinator:
         if isinstance(name, str):
             name = [name]
 
-        def _worker(manager: DeploymentManager, single_name: str, path: Path, upload_options: UploadOptions) -> WorkerResult:
+        def _worker(manager: DeploymentManager, single_name: str, path: Path, log_to_console: bool, upload_options: UploadOptions) -> WorkerResult:
             manager.upload(
                 name=single_name,
                 path=path,
-                upload_options=upload_options
+                log_to_console=log_to_console,
+                upload_options=upload_options,
             )
             return WorkerResultCustom(state="Uploaded", is_success=True)
 
@@ -194,10 +199,11 @@ class DeploymentCoordinator:
         if isinstance(name, str):
             name = [name]
 
-        def _worker(manager: DeploymentManager, single_name: str, path: Path, compile_options: CompileOptions, upload_options: UploadOptions) -> WorkerResult:
+        def _worker(manager: DeploymentManager, single_name: str, path: Path, log_to_console: bool, compile_options: CompileOptions, upload_options: UploadOptions) -> WorkerResult:
             manager.deploy(
                 name=single_name,
                 path=path,
+                log_to_console=log_to_console,
                 compile_options=compile_options,
                 upload_options=upload_options
             )

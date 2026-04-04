@@ -40,7 +40,7 @@ class DeploymentManager:
 
         self.LOGGER = logger or self.DEFAULT_LOGGER
 
-    def clean(self, name: str, path: Path):
+    def clean(self, name: str, path: Path, log_to_console: bool):
         """
         Cleans the deployment for a specific configuration
         :param name: the name of the deployment (filename without extension)
@@ -54,12 +54,17 @@ class DeploymentManager:
             raise ValueError(
                 f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
         for deployment_config in filtered_deployments:
-            self.run_esphome(deployment_config, 'clean', str(file_path))
+            self.run_esphome(
+                deployment_config=deployment_config,
+                log_to_console=log_to_console,
+                command_and_args=['clean', str(file_path)]
+            )
 
     def compile(
         self,
         name: str,
         path: Path,
+        log_to_console: bool,
         compile_options: CompileOptions = CompileOptions()
     ):
         """
@@ -77,10 +82,11 @@ class DeploymentManager:
                 f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
         self.compile_deployment_configs_if_needed(
             deployment_configs=filtered_deployments,
-            compile_options=compile_options
+            compile_options=compile_options,
+            log_to_console=log_to_console,
         )
 
-    def upload(self, name: str, path: Path, upload_options: UploadOptions = UploadOptions()):
+    def upload(self, name: str, path: Path, log_to_console: bool, upload_options: UploadOptions = UploadOptions()):
         """
         Uploads a specific configuration
         :param name: the name of the deployment (filename without extension)
@@ -97,13 +103,15 @@ class DeploymentManager:
         for filtered_deployment in filtered_deployments:
             self.upload_deployment_config_if_needed(
                 deployment_config=filtered_deployment,
-                upload_options=upload_options
+                upload_options=upload_options,
+                log_to_console=log_to_console,
             )
 
     def deploy(
         self,
         name: str,
         path: Path,
+        log_to_console: bool,
         compile_options: CompileOptions = CompileOptions(),
         upload_options: UploadOptions = UploadOptions()
     ):
@@ -121,7 +129,8 @@ class DeploymentManager:
         self.deploy_deployment_configs_if_needed(
             deployment_configs=filtered_deployments,
             compile_options=compile_options,
-            upload_options=upload_options
+            upload_options=upload_options,
+            log_to_console=log_to_console,
         )
 
     def find_esphome_configuration_files(self, directory: Path) -> List[Path]:
@@ -188,6 +197,7 @@ class DeploymentManager:
         deployment_configs: List[EspHomeDeploymentConfiguration],
         compile_options: CompileOptions = CompileOptions(),
         upload_options: UploadOptions = UploadOptions(),
+        log_to_console: bool = None,
     ):
         """
         Processes the given list of deployment configurations
@@ -196,13 +206,14 @@ class DeploymentManager:
         :param upload_options: options for upload
         """
         for config in deployment_configs:
-            self.deploy_deployment_config_if_needed(config, compile_options=compile_options, upload_options=upload_options)
+            self.deploy_deployment_config_if_needed(config, compile_options=compile_options, upload_options=upload_options, log_to_console=log_to_console)
 
     def deploy_deployment_config_if_needed(
         self,
         deployment_config: EspHomeDeploymentConfiguration,
         compile_options: CompileOptions = CompileOptions(),
         upload_options: UploadOptions = UploadOptions(),
+        log_to_console: bool = None,
     ):
         """
         Deploys the given deployment configuration
@@ -210,17 +221,21 @@ class DeploymentManager:
         :param compile_options: options for compilation
         :param upload_options: options for upload
         """
-        self.compile_deployment_config_if_needed(deployment_config=deployment_config, compile_options=compile_options)
-        self.upload_deployment_config_if_needed(deployment_config=deployment_config, upload_options=upload_options)
+        self.compile_deployment_config_if_needed(deployment_config=deployment_config, compile_options=compile_options, log_to_console=log_to_console)
+        self.upload_deployment_config_if_needed(deployment_config=deployment_config, upload_options=upload_options, log_to_console=log_to_console)
 
-    def compile_configuration(self, deployment_config: EspHomeDeploymentConfiguration):
+    def compile_configuration(self, deployment_config: EspHomeDeploymentConfiguration, log_to_console: bool):
         """
         Compiles the given deployment configuration
         :param deployment_config: the deployment configuration to compile
         """
         try:
             self.LOGGER.debug(f"Compiling firmware...")
-            self.run_esphome(deployment_config, 'compile', str(deployment_config.file_path))
+            self.run_esphome(
+                deployment_config=deployment_config,
+                log_to_console=log_to_console,
+                command_and_args=['compile', str(deployment_config.file_path)]
+            )
 
             self.LOGGER.info(f"Successfully compiled")
             self._remember_successful_compile(deployment_config)
@@ -228,7 +243,7 @@ class DeploymentManager:
             self.LOGGER.error(f"Compilation failed: {e}")
             raise CompileFailedException(f"Failed to compile configuration for '{deployment_config.name}': {e}") from e
 
-    def upload_configuration(self, deployment_config: EspHomeDeploymentConfiguration):
+    def upload_configuration(self, deployment_config: EspHomeDeploymentConfiguration, log_to_console: bool):
         """
         Uploads the given deployment configuration to the target device
         :param deployment_config: the deployment configuration to upload
@@ -239,9 +254,17 @@ class DeploymentManager:
             ip_address = deployment_config.ip_address
             if ip_address:
                 self.LOGGER.debug(f"Using custom IP address for upload: {ip_address}")
-                self.run_esphome(deployment_config, 'upload', '--device', ip_address, str(deployment_config.file_path))
+                self.run_esphome(
+                    deployment_config=deployment_config,
+                    log_to_console=log_to_console,
+                    command_and_args=['upload', '--device', ip_address, str(deployment_config.file_path)]
+                )
             else:
-                self.run_esphome(deployment_config, 'upload', str(deployment_config.file_path))
+                self.run_esphome(
+                    deployment_config=deployment_config,
+                    log_to_console=log_to_console,
+                    command_and_args=['upload', str(deployment_config.file_path)]
+                )
 
             self.LOGGER.info(f"Successfully uploaded")
             self._remember_successful_upload(deployment_config)
@@ -324,26 +347,27 @@ class DeploymentManager:
             return None
         return calculate_md5_file(deployment_config.binary_file_path)
 
-    def run_esphome(self, deployment_config: EspHomeDeploymentConfiguration, *args):
+    def run_esphome(self, deployment_config: EspHomeDeploymentConfiguration, command_and_args: List[str], log_to_console: bool):
         """
         Runs the esphome command with the given arguments
-        :param args: the arguments to pass to esphome
+        :param deployment_config: the deployment configuration for which to run the command (used for logging and log file naming)
+        :param command_and_args: the command and its arguments to run, e.g., ['compile', 'my_config.yaml']
+        :param log_to_console: whether to also log the output to the console in real time (defaults to True if AppConfig.MAX_WORKERS is 1, otherwise False to avoid interleaving logs from multiple parallel runs)
         """
         # Create the logs directory if it doesn't exist
-        log_file = self._create_esphome_command_log_file(deployment_config, args)
+        log_file = self._create_esphome_command_log_file(deployment_config, command_and_args)
 
-        self.LOGGER.info(f"Running 'esphome {args[0]}' >> {log_file}")
-        self.LOGGER.debug(f"Executing esphome with arguments: {args} >> {log_file}")
+        self.LOGGER.info(f"Running 'esphome {command_and_args[0]}' >> {log_file}")
+        self.LOGGER.debug(f"Executing esphome with arguments: {command_and_args} >> {log_file}")
 
         logger = None
-        log_to_console = AppConfig.MAX_WORKERS.value == 1
         if log_to_console:
             logger = self.LOGGER
 
-        self._run_esphome_subprocess(log_file=log_file, logger=logger, *args)
+        self._run_esphome_subprocess(log_file=log_file, logger=logger, *command_and_args)
         # self._run_esphome_module(*args)
 
-    def _create_esphome_command_log_file(self, deployment_config: EspHomeDeploymentConfiguration, args):
+    def _create_esphome_command_log_file(self, deployment_config: EspHomeDeploymentConfiguration, args: List[str]):
         log_dir = deployment_config.file_path.parent / ".deployment-logs"
         log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -427,6 +451,7 @@ class DeploymentManager:
         self,
         deployment_configs: List[EspHomeDeploymentConfiguration],
         compile_options: CompileOptions,
+        log_to_console: bool,
     ):
         """
         Compiles the given list of deployment configurations
@@ -437,13 +462,15 @@ class DeploymentManager:
         for config in deployment_configs:
             self.compile_deployment_config_if_needed(
                 deployment_config=config,
-                compile_options=compile_options
+                compile_options=compile_options,
+                log_to_console=log_to_console,
             )
 
     def compile_deployment_config_if_needed(
         self,
         deployment_config: EspHomeDeploymentConfiguration,
         compile_options: CompileOptions,
+        log_to_console: bool,
     ):
         """
         Compiles a single deployment configuration
@@ -464,7 +491,7 @@ class DeploymentManager:
                 if not compile_options.allow_downgrade:
                     raise AssertionError("Downgrade not allowed. Use the '--allow-downgrade' flag to enable downgrading.")
                 self.LOGGER.info(f"Allowing ESPHome version downgrade as per '--allow-downgrade' flag, proceeding with compile.")
-                self.compile_configuration(deployment_config)
+                self.compile_configuration(deployment_config, log_to_console)
                 return
 
             if (compile_info.config_hash == current_config_hash and
@@ -474,11 +501,12 @@ class DeploymentManager:
                     f"Skipping compile: Configuration unchanged and already compiled with esphome version {current_esphome_version}.")
                 return
 
-        self.compile_configuration(deployment_config)
+        self.compile_configuration(deployment_config, log_to_console)
 
     def upload_deployment_config_if_needed(
         self,
         deployment_config: EspHomeDeploymentConfiguration,
+        log_to_console: bool,
         upload_options: UploadOptions = UploadOptions(),
     ):
         """
@@ -507,4 +535,4 @@ class DeploymentManager:
                 else:
                     self.LOGGER.info(f"Local firmware binary has not changed, forcing upload as per '--force' flag.")
 
-        self.upload_configuration(deployment_config)
+        self.upload_configuration(deployment_config, log_to_console)

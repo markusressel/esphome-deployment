@@ -17,7 +17,6 @@ dependencies = [
     "ruamel-yaml-clib==0.2.15",
     "click>=8.0",
     "container-app-conf>=5.0.0",
-    "esphome (>=2026.1.5,<2027.0.0)",
     "rich>=13.0"
 ]
 
