@@ -45,10 +45,15 @@ class EspHomePackageReference:
 
 
 @dataclass
+class EspHomeOptions:
+    path: Optional[Path] = None
+
+@dataclass
 class EspHomeDeploymentOptions:
     # Whether to deploy this configuration (includes both build and upload)
     # Can be used to ignore certain configurations during batch deployments
     deploy: bool = True
+    esphome: EspHomeOptions = field(default_factory=EspHomeOptions)
     tags: List[str] = field(default_factory=list)
 
 
