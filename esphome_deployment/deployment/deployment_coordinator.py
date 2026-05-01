@@ -78,6 +78,7 @@ class DeploymentCoordinator:
         worker_fn: WorkerFunc,
         name: str,
         path: Path,
+        log_to_console: bool,
         *args,
         **kwargs
     ):
