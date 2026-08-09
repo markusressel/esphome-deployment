@@ -102,8 +102,17 @@ class EspHomeDeploymentConfiguration:
         # ".esphome/build/quinled_dig2go_bedroom_ceiling/.pioenvs/quinled_dig2go_bedroom_ceiling/firmware.bin"
 
         esphome_name = self.parsed_yaml_content["esphome"]["name"]
+        # old esphome versions used this path:
         binary_file_path = self.build_path / f".pioenvs/{esphome_name}/firmware.bin"
-        return binary_file_path
+        if binary_file_path.exists():
+            return binary_file_path
+
+        # newer ones use this one:
+        binary_file_path = self.build_path / f"build/firmware.factory.bin"
+        if binary_file_path.exists():
+            return binary_file_path
+
+        raise FileNotFoundError(f"Could not find firmware binary for {self.file_path} in expected locations.")
 
     @property
     def esphom_storage_data(self) -> Dict[str, Any]:
