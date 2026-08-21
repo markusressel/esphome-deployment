@@ -102,7 +102,7 @@ def _base_setup() -> Console:
 @click.option(*get_option_names(PARAM_DOWNGRADE_NAME), is_flag=True, default=False,
               help='Allow downgrading ESPHome version when compiling')
 @click.option(*get_option_names(PARAM_FORCE), is_flag=True, default=False,
-              help='Force upload even if the binary matches the last uploaded one')
+              help='Force compile even if the configuration hasn\'t changed')
 def c_compile(
     name: Optional[str | list[str]],
     tag: Optional[str | list[str]],
