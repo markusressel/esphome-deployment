@@ -101,10 +101,13 @@ def _base_setup() -> Console:
               help='The tag of the deployment(s) to compile')
 @click.option(*get_option_names(PARAM_DOWNGRADE_NAME), is_flag=True, default=False,
               help='Allow downgrading ESPHome version when compiling')
+@click.option(*get_option_names(PARAM_FORCE), is_flag=True, default=False,
+              help='Force upload even if the binary matches the last uploaded one')
 def c_compile(
     name: Optional[str | list[str]],
     tag: Optional[str | list[str]],
     allow_downgrade: bool,
+    force: bool = False,
 ):
     """
     Compile the given deployment(s)
@@ -117,7 +120,7 @@ def c_compile(
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
-    compile_options = CompileOptions(allow_downgrade=allow_downgrade)
+    compile_options = CompileOptions(force=force, allow_downgrade=allow_downgrade)
 
     deployment_coordinator.compile(name=names, path=path, compile_options=compile_options)
 
