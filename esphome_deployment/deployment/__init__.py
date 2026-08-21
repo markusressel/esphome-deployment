@@ -11,6 +11,9 @@ from esphome_deployment.util.semver import SemVerVersion
 
 @dataclass
 class CompileOptions:
+    # whether to force the compilation even if the state tells us that we have already compiled this configuration
+    force: bool = False
+
     # whether to allow downgrading ESPHome version when compiling
     allow_downgrade: bool = False
 

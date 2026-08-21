@@ -191,7 +191,7 @@ def c_deploy(
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
-    compile_options = CompileOptions(allow_downgrade=allow_downgrade)
+    compile_options = CompileOptions(force=force, allow_downgrade=allow_downgrade)
     upload_options = UploadOptions(
         force=force,
         ignore_compiled_binary_mismatch=ignore_compiled_binary_mismatch,

@@ -497,9 +497,12 @@ class DeploymentManager:
             if (compile_info.config_hash == current_config_hash and
                 compile_info.esphome_version == current_esphome_version and
                 compile_info.binary_hash == current_firmware_binary_hash):
-                self.LOGGER.warning(
-                    f"Skipping compile: Configuration unchanged and already compiled with esphome version {current_esphome_version}.")
-                return
+                if not compile_options.force:
+                    self.LOGGER.warning(
+                        f"Skipping compile: Configuration unchanged and already compiled with esphome version {current_esphome_version}.")
+                    return
+                else:
+                    self.LOGGER.info(f"Configuration unchanged and already compiled with esphome version {current_esphome_version}, forcing compile as per '--force' flag.")
 
         self.compile_configuration(deployment_config, log_to_console)
 
