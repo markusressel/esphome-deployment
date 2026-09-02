@@ -223,7 +223,35 @@ def c_clean(
     persistence = DeploymentPersistence(base_path=path)
     deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
 
-    deployment_coordinator.clean(name=names, path=path)
+    deployment_coordinator.clean(name=names, path=path, log_to_console=True)
+
+
+@cli.command(name="logs")
+@click.option(*get_option_names(PARAM_DEPLOYMENT_NAME), type=str, multiple=False, required=True,
+                help='The name of the deployment to show logs for (filename without extension)')
+def c_logs(
+    name: str,
+):
+    """
+    Show logs for the given deployment
+    """
+    names = _detect_device_configuration_names(name, None)
+    
+    if not names:
+        click.echo(f"No configuration found for '{name}'")
+        sys.exit(1)
+        
+    if len(names) > 1:
+        click.echo(f"Found multiple configurations for '{name}': {', '.join(names)}. Please specify exactly one.")
+        sys.exit(1)
+
+    console = _base_setup()
+    path = Path(os.getcwd())
+
+    persistence = DeploymentPersistence(base_path=path)
+    deployment_coordinator = DeploymentCoordinator(persistence=persistence, console=console)
+
+    deployment_coordinator.logs(name=names[0], path=path)
 
 
 @cli.command(name="config")

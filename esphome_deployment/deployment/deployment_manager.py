@@ -60,6 +60,35 @@ class DeploymentManager:
                 command_and_args=['clean', str(file_path)]
             )
 
+    def logs(self, name: str, path: Path):
+        """
+        Shows logs for a specific configuration
+        :param name: the name of the deployment (filename without extension)
+        :param path: the path where the configuration file is located
+        """
+        file_path = path / f"{name}.yaml"
+        file_paths = [file_path]
+        deployment_configuration = self.load_deployment_configurations(file_paths)
+        filtered_deployments = self.filter_deployments(deployment_configuration)
+        if len(filtered_deployments) > 1:
+            raise ValueError(
+                f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
+        for deployment_config in filtered_deployments:
+            ip_address = deployment_config.ip_address
+            if ip_address:
+                self.LOGGER.debug(f"Using custom IP address for logs: {ip_address}")
+                self.run_esphome(
+                    deployment_config=deployment_config,
+                    log_to_console=True,
+                    command_and_args=['logs', '--device', ip_address, str(deployment_config.file_path)]
+                )
+            else:
+                self.run_esphome(
+                    deployment_config=deployment_config,
+                    log_to_console=True,
+                    command_and_args=['logs', str(deployment_config.file_path)]
+                )
+
     def compile(
         self,
         name: str,

@@ -131,6 +131,20 @@ class DeploymentCoordinator:
 
         self._run_in_parallel(names=name, worker_fn=_worker, path=path)
 
+    def logs(
+        self,
+        name: str,
+        path: Path,
+    ):
+        """
+        Shows logs for a specific configuration
+        :param name: the name of the deployment (filename without extension)
+        :param path: the path where the configuration file is located
+        """
+        logger_adapter = logging.LoggerAdapter(self.LOGGER, {"device": name})
+        manager = DeploymentManager(persistence=self._persistence, logger=logger_adapter)
+        manager.logs(name=name, path=path)
+
     def compile(
         self,
         name: str | List[str],
