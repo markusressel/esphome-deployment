@@ -56,6 +56,8 @@ def find_included_header_file_paths(data: Any) -> List[Path]:
     :param data: The input data.
     :return: A list of included header file paths.
     """
+    if not isinstance(data, dict):
+        return []
     include_list = data.get('esphome', {}).get('includes', [])
     included_file_paths = list(map(lambda x: Path(x), include_list))
     return included_file_paths
