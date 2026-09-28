@@ -372,9 +372,10 @@ class DeploymentManager:
         :param deployment_config: the deployment configuration to hash
         :return: a string representing the hash of the compiled firmware binary
         """
-        if not deployment_config.binary_file_path.exists():
+        try:
+            return calculate_md5_file(deployment_config.binary_file_path)
+        except FileNotFoundError:
             return None
-        return calculate_md5_file(deployment_config.binary_file_path)
 
     def run_esphome(self, deployment_config: EspHomeDeploymentConfiguration, command_and_args: List[str], log_to_console: bool):
         """
@@ -577,8 +578,10 @@ class DeploymentManager:
         :param deployment_config: the deployment configuration to upload
         :param upload_options: options for upload
         """
-        if not deployment_config.binary_file_path.exists():
-            raise FirmwareBinaryNotFound(f"Firmware binary not found: {deployment_config.binary_file_path}, please compile first.")
+        try:
+            _ = deployment_config.binary_file_path
+        except FileNotFoundError:
+            raise FirmwareBinaryNotFound(f"Firmware binary not found for {deployment_config.file_path}, please compile first.")
         compile_info: Optional[CompileInfo] = self._get_remembered_compile_info(deployment_config)
         upload_info: Optional[UploadInfo] = self._get_remembered_upload_info(deployment_config)
         if upload_info is not None:
