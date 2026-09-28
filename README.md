@@ -75,6 +75,20 @@ See: https://esphome.io/components/esp32/
 > The `esp8266` does **not** support or require any special options for reproducible builds at this time.
 > Only the general `esphome` section as shown above is needed.
 
+#### Environment Variables
+
+By default, ESPHome injects the current timestamp into the firmware binary as `build_time_str`, which will cause the MD5 hash to change upon a clean compilation even if the
+configuration is identical.
+To guarantee perfectly reproducible builds across environments or CI pipelines, you must define the standard `SOURCE_DATE_EPOCH` environment variable.
+
+`esphome-deployment` automatically injects a Python hook into the ESPHome compiler process. This securely mocks the internal system clock to natively support `SOURCE_DATE_EPOCH`
+out of the box, ensuring reproducible builds with standard upstream ESPHome releases (no custom ESPHome forks required).
+
+```bash
+export SOURCE_DATE_EPOCH=1704067200
+esphome-deployment deploy ...
+```
+
 ### Installation
 
 Install from PyPI:
