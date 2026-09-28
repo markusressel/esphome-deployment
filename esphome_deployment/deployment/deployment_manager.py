@@ -423,11 +423,41 @@ class DeploymentManager:
         return log_file
 
     def _run_esphome_subprocess(self, *args, log_file: Path, logger: Optional[logging.Logger]):
+        import os
+        import tempfile
+        import textwrap
+        env = os.environ.copy()
+
+        # Inject sitecustomize to mock time.time() for reproducible builds
+        # This is a hack to bypass ESPHome's lack of SOURCE_DATE_EPOCH support
+        hook_dir = tempfile.mkdtemp(prefix="esphome_hook_")
+        hook_path = os.path.join(hook_dir, "sitecustomize.py")
+        with open(hook_path, "w", encoding="utf-8") as f:
+            f.write(textwrap.dedent("""\
+                import time
+                import os
+                original_time = time.time
+
+                def mocked_time():
+                    import traceback
+                    for frame in traceback.extract_stack():
+                        if "get_build_info" in frame.name:
+                            epoch = os.environ.get("SOURCE_DATE_EPOCH")
+                            if epoch:
+                                return float(epoch)
+                    return original_time()
+
+                time.time = mocked_time
+            """))
+
+        env["PYTHONPATH"] = hook_dir + (os.pathsep + env.get("PYTHONPATH", ""))
+
         with open(log_file, "w", encoding="utf-8") as f:
             process = subprocess.Popen(
                 ['esphome', *args],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,  # Merge stderr in stdout
+                env=env,
                 text=True,
                 bufsize=1  # Line-buffered for realtime streaming
             )
