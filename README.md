@@ -132,6 +132,7 @@ Example:
 ```yaml
 .esphome_deployment:
   deploy: true
+  device: /dev/ttyACM0  # target device/port, or "usb" for auto-detection
   tags:
     - bluetooth_proxy
 
@@ -141,6 +142,14 @@ packages:
 
 ... rest of your esp home config ...
 ```
+
+Available options:
+
+- `deploy` (boolean, default: `true`): Include or exclude this device during batch deployments.
+- `device` (string): Explicit target device or port to pass to `esphome upload --device` and `esphome logs --device` (e.g. `/dev/ttyACM0`, `192.168.1.50`, or `"usb"` to auto-detect
+  the first connected `/dev/ttyACM*` / `/dev/ttyUSB*` port). If omitted, falls back to the device's IP address stored by ESPHome.
+- `usb` (boolean): Shorthand alternative for `device: usb`.
+- `tags` (list of strings): Tags for filtering deployments with `-t` / `--tag`.
 
 ## Repository layout, state files and logs
 
