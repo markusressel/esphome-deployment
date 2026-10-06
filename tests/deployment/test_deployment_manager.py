@@ -16,6 +16,7 @@ from esphome_deployment.deployment.deployment_manager import (
     DeploymentManager,
     DeploymentDisabledException,
     FirmwareBinaryNotFound,
+    UploadFailedException,
 )
 from esphome_deployment.util.semver import SemVerVersion
 from .. import TestBase
@@ -299,6 +300,54 @@ class DeploymentManagerTest(TestBase):
             )
             mock_upload.assert_called_once()
 
+    def test_upload_uses_configured_device_over_ip_address(self):
+        manager = _make_manager()
+        config = MagicMock(spec=EspHomeDeploymentConfiguration)
+        config.name = "test_device"
+        config.file_path = Path("/tmp/test.yaml")
+        config.device = "/dev/ttyACM0"
+        config.ip_address = "192.168.5.85"
+
+        with patch.object(manager, "run_esphome") as mock_run:
+            with patch.object(manager, "_remember_successful_upload"):
+                manager.upload_configuration(config, log_to_console=False)
+                mock_run.assert_called_once_with(
+                    deployment_config=config,
+                    log_to_console=False,
+                    command_and_args=['upload', '--device', '/dev/ttyACM0', str(config.file_path)]
+                )
+
+    def test_upload_resolves_usb_device(self):
+        manager = _make_manager()
+        config = MagicMock(spec=EspHomeDeploymentConfiguration)
+        config.name = "test_device"
+        config.file_path = Path("/tmp/test.yaml")
+        config.device = "usb"
+        config.ip_address = "192.168.5.85"
+
+        with (
+            patch.object(manager, "_find_usb_serial_port", return_value="/dev/ttyACM0"),
+            patch.object(manager, "run_esphome") as mock_run,
+            patch.object(manager, "_remember_successful_upload"),
+        ):
+            manager.upload_configuration(config, log_to_console=False)
+            mock_run.assert_called_once_with(
+                deployment_config=config,
+                log_to_console=False,
+                command_and_args=['upload', '--device', '/dev/ttyACM0', str(config.file_path)]
+            )
+
+    def test_upload_raises_when_usb_device_not_found(self):
+        manager = _make_manager()
+        config = MagicMock(spec=EspHomeDeploymentConfiguration)
+        config.name = "test_device"
+        config.file_path = Path("/tmp/test.yaml")
+        config.device = "usb"
+
+        with patch.object(manager, "_find_usb_serial_port", return_value=None):
+            with self.assertRaises(UploadFailedException):
+                manager.upload_configuration(config, log_to_console=False)
+
 
 class EspHomeDeploymentConfigurationPackagesTest(TestBase):
 
@@ -384,3 +433,27 @@ class EspHomeDeploymentConfigurationPackagesTest(TestBase):
             self.assertIn("a", names)
             self.assertIn("b", names)
 
+
+class EspHomeDeploymentConfigurationOptionsTest(TestBase):
+
+    def test_deployment_options_parses_device(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = _make_deployment_config(
+                Path(tmp) / "device.yaml",
+                parsed_yaml={
+                    "esphome": {"name": "test"},
+                    ".esphome_deployment": {"device": "/dev/ttyACM0"}
+                }
+            )
+            self.assertEqual(config.device, "/dev/ttyACM0")
+
+    def test_deployment_options_parses_usb_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = _make_deployment_config(
+                Path(tmp) / "device.yaml",
+                parsed_yaml={
+                    "esphome": {"name": "test"},
+                    ".esphome_deployment": {"usb": True}
+                }
+            )
+            self.assertEqual(config.device, "usb")

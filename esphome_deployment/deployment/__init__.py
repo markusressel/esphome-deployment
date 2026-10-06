@@ -58,6 +58,7 @@ class EspHomeDeploymentOptions:
     deploy: bool = True
     esphome: EspHomeOptions = field(default_factory=EspHomeOptions)
     tags: List[str] = field(default_factory=list)
+    device: Optional[str] = None
 
 
 @dataclass
@@ -134,6 +135,10 @@ class EspHomeDeploymentConfiguration:
         return self.esphome_deployment_options.tags
 
     @property
+    def device(self) -> Optional[str]:
+        return self.esphome_deployment_options.device
+
+    @property
     def ip_address(self) -> Optional[str]:
         return self.esphom_storage_data.get("address", None)
 
@@ -148,7 +153,7 @@ class EspHomeDeploymentConfiguration:
         return self._merge_deployment_options(package_options, top_level_options)
 
     @staticmethod
-    def _parse_deployment_options(parsed_yaml: Dict[str, Any]) -> Tuple[Optional[bool], List[str]]:
+    def _parse_deployment_options(parsed_yaml: Dict[str, Any]) -> Tuple[Optional[bool], List[str], Optional[str]]:
         raw_options = parsed_yaml.get(".esphome_deployment", {})
         deploy: Optional[bool] = None
         if "deploy" in raw_options:
@@ -159,26 +164,33 @@ class EspHomeDeploymentConfiguration:
             raw_tags = [raw_tags]
         tags = [str(tag) for tag in raw_tags]
 
-        return deploy, tags
+        device: Optional[str] = raw_options.get("device", None)
+        if device is None and raw_options.get("usb") is True:
+            device = "usb"
+        elif device is not None:
+            device = str(device)
+
+        return deploy, tags, device
 
     @staticmethod
     def _merge_deployment_options(
-        base: Tuple[Optional[bool], List[str]],
-        override: Tuple[Optional[bool], List[str]],
+        base: Tuple[Optional[bool], List[str], Optional[str]],
+        override: Tuple[Optional[bool], List[str], Optional[str]],
     ) -> EspHomeDeploymentOptions:
-        deploy, merged_tags = EspHomeDeploymentConfiguration._merge_deployment_option_values(base, override)
+        deploy, merged_tags, device = EspHomeDeploymentConfiguration._merge_deployment_option_values(base, override)
         return EspHomeDeploymentOptions(
             deploy=deploy,
             tags=merged_tags,
+            device=device,
         )
 
     @staticmethod
     def _merge_deployment_option_values(
-        base: Tuple[Optional[bool], List[str]],
-        override: Tuple[Optional[bool], List[str]],
-    ) -> Tuple[bool, List[str]]:
-        base_deploy, base_tags = base
-        override_deploy, override_tags = override
+        base: Tuple[Optional[bool], List[str], Optional[str]],
+        override: Tuple[Optional[bool], List[str], Optional[str]],
+    ) -> Tuple[bool, List[str], Optional[str]]:
+        base_deploy, base_tags, base_device = base
+        override_deploy, override_tags, override_device = override
 
         deploy = base_deploy if override_deploy is None else override_deploy
         if deploy is None:
@@ -186,18 +198,19 @@ class EspHomeDeploymentConfiguration:
 
         # Keep tag order stable while preventing duplicates.
         merged_tags = list(dict.fromkeys([*base_tags, *override_tags]))
-        return deploy, merged_tags
+        device = override_device if override_device is not None else base_device
+        return deploy, merged_tags, device
 
     def _collect_package_deployment_options(
         self,
         visited_files: Set[Path],
-    ) -> Tuple[Optional[bool], List[str]]:
+    ) -> Tuple[Optional[bool], List[str], Optional[str]]:
         resolved_path = self.file_path.resolve()
         if resolved_path in visited_files:
-            return None, []
+            return None, [], None
         visited_files.add(resolved_path)
 
-        merged: Tuple[Optional[bool], List[str]] = (None, [])
+        merged: Tuple[Optional[bool], List[str], Optional[str]] = (None, [], None)
         for package in self.packages:
             if not package.file:
                 continue

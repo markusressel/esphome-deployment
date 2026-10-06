@@ -74,13 +74,13 @@ class DeploymentManager:
             raise ValueError(
                 f"Expected exactly one deployment configuration for '{file_path}', but found {len(filtered_deployments)} after filtering: {[d.filename for d in filtered_deployments]}")
         for deployment_config in filtered_deployments:
-            ip_address = deployment_config.ip_address
-            if ip_address:
-                self.LOGGER.debug(f"Using custom IP address for logs: {ip_address}")
+            device = self._resolve_target_device(deployment_config)
+            if device:
+                self.LOGGER.debug(f"Using target device for logs: {device}")
                 self.run_esphome(
                     deployment_config=deployment_config,
                     log_to_console=True,
-                    command_and_args=['logs', '--device', ip_address, str(deployment_config.file_path)]
+                    command_and_args=['logs', '--device', device, str(deployment_config.file_path)]
                 )
             else:
                 self.run_esphome(
@@ -272,6 +272,26 @@ class DeploymentManager:
             self.LOGGER.error(f"Compilation failed: {e}")
             raise CompileFailedException(f"Failed to compile configuration for '{deployment_config.name}': {e}") from e
 
+    @staticmethod
+    def _find_usb_serial_port() -> Optional[str]:
+        import glob
+        ports = sorted(glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*"))
+        if ports:
+            return ports[0]
+        return None
+
+    def _resolve_target_device(self, deployment_config: EspHomeDeploymentConfiguration) -> Optional[str]:
+        target_device = deployment_config.device
+        if target_device is not None:
+            if target_device.lower() in ("usb", "serial"):
+                port = self._find_usb_serial_port()
+                if not port:
+                    raise UploadFailedException("Configured for USB upload ('device: usb'), but no /dev/ttyACM* or /dev/ttyUSB* device found.")
+                return port
+            return target_device
+
+        return deployment_config.ip_address
+
     def upload_configuration(self, deployment_config: EspHomeDeploymentConfiguration, log_to_console: bool):
         """
         Uploads the given deployment configuration to the target device
@@ -280,13 +300,13 @@ class DeploymentManager:
         try:
             self.LOGGER.debug(f"Uploading firmware...")
 
-            ip_address = deployment_config.ip_address
-            if ip_address:
-                self.LOGGER.debug(f"Using custom IP address for upload: {ip_address}")
+            device = self._resolve_target_device(deployment_config)
+            if device:
+                self.LOGGER.debug(f"Using target device for upload: {device}")
                 self.run_esphome(
                     deployment_config=deployment_config,
                     log_to_console=log_to_console,
-                    command_and_args=['upload', '--device', ip_address, str(deployment_config.file_path)]
+                    command_and_args=['upload', '--device', device, str(deployment_config.file_path)]
                 )
             else:
                 self.run_esphome(
@@ -579,9 +599,12 @@ class DeploymentManager:
         :param upload_options: options for upload
         """
         try:
-            _ = deployment_config.binary_file_path
+            binary_file = deployment_config.binary_file_path
+            if hasattr(binary_file, 'exists') and not binary_file.exists():
+                raise FileNotFoundError()
         except FileNotFoundError:
-            raise FirmwareBinaryNotFound(f"Firmware binary not found for {deployment_config.file_path}, please compile first.")
+            file_ref = getattr(deployment_config, "file_path", None) or getattr(deployment_config, "filename", deployment_config)
+            raise FirmwareBinaryNotFound(f"Firmware binary not found for {file_ref}, please compile first.")
         compile_info: Optional[CompileInfo] = self._get_remembered_compile_info(deployment_config)
         upload_info: Optional[UploadInfo] = self._get_remembered_upload_info(deployment_config)
         if upload_info is not None:
