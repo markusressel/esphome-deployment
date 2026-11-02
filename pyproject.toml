@@ -25,7 +25,7 @@ esphome-deployment = "esphome_deployment.cli:cli"
 
 [project.optional-dependencies]
 test = [
-    "pytest==9.0.3"
+    "pytest==9.1.1"
 ]
 
 [tool.pytest.ini_options]
